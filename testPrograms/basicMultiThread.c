@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+int initialized = 0;
 
 void *hello(void* par)
 {
@@ -15,6 +16,7 @@ void *hello(void* par)
 
 int main(void)
 {
+	initialized = 1;
 	int i, ret, numthreads = 2;
 	void *thread_status[numthreads];
 	int thread_param[numthreads][1];
