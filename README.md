@@ -1,6 +1,18 @@
 # Machine Learning based AST Concurrency Analyser
 
-The basic idea is to train a ML model in a unsupervised self-testing environment advanced patterns of concurrency issues. The goal is to have it output a probability value for any given peace of AST code wihtout being trained on a dataset.
+The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given peace of AST code wihtout being trained on a dataset.
+
+Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
+
+# Todo
+
+- [ ] Approximating feasibility of the project
+	- Simulating the concurrency issue does not seem to be impossible
+	- Also building an abstract graph from compile and runtime data is possible and has been done by thread/ mem sanatizers 
+- [ ] Generating graph from runtime interception/ memory instrumentation and AST data
+- [ ] Writing a simulation environment that generates a concurrent program from an AST like abstraction
+- [ ] Putting it all together....
+
 
 # Approach
 
@@ -21,12 +33,14 @@ And [this](https://maskray.me/blog/2023-01-08-all-about-sanitizer-interceptors) 
 Since it took some time to find the right literature, here a few links:
 - https://gcc.gnu.org/wiki/cauldron2012?action=AttachFile&do=get&target=kcc.pdf
 - https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/data-race-test/ThreadSanitizerLLVM.pdf
-- https://static.googleusercontent.com/media/research.google.com/ja//pubs/archive/35604.pdf
 - https://github.com/google/sanitizers/wiki/ThreadSanitizerAlgorithm
 - https://storage.googleapis.com/pub-tools-public-publication-data/pdf/37278.pdf
 - https://storage.googleapis.com/pub-tools-public-publication-data/pdf/35604.pdf
 - https://github.com/google/sanitizers/wiki/ThreadSanitizerAlgorithm
 - https://github.com/MattPD/cpplinks/blob/master/analysis.dynamic.md#software-sanitizers
+- https://valgrind.org/docs/valgrind2007.pdf
+- https://github.com/QBDI/QBDI
+
 
 # Setup
 
