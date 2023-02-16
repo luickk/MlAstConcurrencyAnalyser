@@ -27,8 +27,19 @@ Currently the preferred Ml model is a [GAN](https://de.wikipedia.org/wiki/Genera
 
 ## Fundamentals
 
-It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden and built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundemntals though.
-And [this](https://maskray.me/blog/2023-01-08-all-about-sanitizer-interceptors) is a really helpful blogpost on how function interception in sanatizers work.
+It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden in or built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundemntals though.
+
+## Tools for Instrumentation/ Interception, AST analysis
+
+Since the approach of this project to generate a proper dataset for the Ml model is a mix of run and compiletime data, both AST code and runtime information need to be combined into one graph.
+For AST parsing and analysis, LLVM offers libclang which is really handy and covers all requirements. 
+
+In order to generate a somewhat complete graph, we need the memory access information, which can only be read through memory instrumentation and binary patching.
+Intercepting function calls alone will not be enough but could have been easily achieved thourgh [Clangs natively suported](https://maskray.me/blog/2023-01-08-all-about-sanitizer-interceptors) fn wrapper functionality. 
+
+For memory instrumentation, there are multple external tools avaiable.
+- QBDI is great lacks support of multithreading(?)
+- Frida is a really heavy framework that is not suited for fast program analysis evolutions as required for Ml training
 
 Since it took some time to find the right literature, here a few links:
 - https://gcc.gnu.org/wiki/cauldron2012?action=AttachFile&do=get&target=kcc.pdf
