@@ -1,4 +1,5 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/myclient.dir/mem_inst_analyser.o"
   "CMakeFiles/myclient.dir/memtrace.o"
   "libmyclient.pdb"
   "libmyclient.so"

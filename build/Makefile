@@ -124,6 +124,21 @@ myclient/fast:
 .PHONY : myclient/fast
 
 # target to build an object file
+mem_inst_analyser.o:
+	$(MAKE) -f CMakeFiles/myclient.dir/build.make CMakeFiles/myclient.dir/mem_inst_analyser.o
+.PHONY : mem_inst_analyser.o
+
+# target to preprocess a source file
+mem_inst_analyser.i:
+	$(MAKE) -f CMakeFiles/myclient.dir/build.make CMakeFiles/myclient.dir/mem_inst_analyser.i
+.PHONY : mem_inst_analyser.i
+
+# target to generate assembly for a file
+mem_inst_analyser.s:
+	$(MAKE) -f CMakeFiles/myclient.dir/build.make CMakeFiles/myclient.dir/mem_inst_analyser.s
+.PHONY : mem_inst_analyser.s
+
+# target to build an object file
 memtrace.o:
 	$(MAKE) -f CMakeFiles/myclient.dir/build.make CMakeFiles/myclient.dir/memtrace.o
 .PHONY : memtrace.o
@@ -147,6 +162,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... myclient"
+	@echo "... mem_inst_analyser.o"
+	@echo "... mem_inst_analyser.i"
+	@echo "... mem_inst_analyser.s"
 	@echo "... memtrace.o"
 	@echo "... memtrace.i"
 	@echo "... memtrace.s"

@@ -150,7 +150,13 @@ dr_ir_opcodes_arm.h
 
 ../DynamoRIO/include/dr_tracedump.h
 
-/home/ubuntu/projekte/MlConcurrencyAstAnalyser/memtrace.c
+/home/ubuntu/projekte/MlConcurrencyAstAnalyser/include/memtrace.h
+
+/home/ubuntu/projekte/MlConcurrencyAstAnalyser/include/types.h
+stdint.h
+-
+
+/home/ubuntu/projekte/MlConcurrencyAstAnalyser/mem_inst_analyser.c
 stdio.h
 -
 stddef.h
@@ -167,4 +173,8 @@ drutil.h
 /home/ubuntu/projekte/MlConcurrencyAstAnalyser/drutil.h
 drx.h
 /home/ubuntu/projekte/MlConcurrencyAstAnalyser/drx.h
+include/types.h
+/home/ubuntu/projekte/MlConcurrencyAstAnalyser/include/types.h
+include/memtrace.h
+/home/ubuntu/projekte/MlConcurrencyAstAnalyser/include/memtrace.h
 

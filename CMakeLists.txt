@@ -1,5 +1,6 @@
 project(sample)
-add_library(myclient SHARED memtrace.c)
+add_library(myclient SHARED memtrace.c mem_inst_analyser.c)
+target_include_directories(myclient PRIVATE ${include/})
 find_package(DynamoRIO PATHS DynamoRIO/cmake)
 if (NOT DynamoRIO_FOUND)
   message(FATAL_ERROR "DynamoRIO package required to build")

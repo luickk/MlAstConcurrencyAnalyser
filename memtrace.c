@@ -7,81 +7,16 @@
 #include "drutil.h"
 #include "drx.h"
 
-enum {
-    REF_TYPE_READ = 0,
-    REF_TYPE_WRITE = 1,
-};
-/* Each mem_ref_t is a <type, size, addr> entry representing a memory reference
- * instruction or the reference information, e.g.:
- * - mem ref instr: { type = 42 (call), size = 5, addr = 0x7f59c2d002d3 }
- * - mem ref info:  { type = 1 (write), size = 8, addr = 0x7ffeacab0ec8 }
- */
-typedef struct _mem_ref_t {
-    ushort type; /* r(0), w(1), or opcode (assuming 0/1 are invalid opcode) */
-    ushort size; /* mem ref size or instr length */
-    app_pc addr; /* mem ref addr or instr pc */
-} mem_ref_t;
-
-/* Max number of mem_ref a buffer can have. It should be big enough
- * to hold all entries between clean calls.
- */
-#define MAX_NUM_MEM_REFS 4096
-/* The maximum size of buffer for holding mem_refs. */
-#define MEM_BUF_SIZE (sizeof(mem_ref_t) * MAX_NUM_MEM_REFS)
-
-/* thread private log file and counter */
-typedef struct {
-    byte *seg_base;
-    mem_ref_t *buf_base;
-    file_t log;
-    FILE *logf;
-    uint64 num_refs;
-} per_thread_t;
+#include "include/memtrace.h"
 
 static client_id_t client_id;
 static void *mutex;        /* for multithread support */
 static uint64 num_refs;    /* keep a global memory reference count */
 static bool log_to_stderr; /* for testing */
 
-/* Allocated TLS slot offsets */
-enum {
-    MEMTRACE_TLS_OFFS_BUF_PTR,
-    MEMTRACE_TLS_COUNT, /* total number of TLS slots allocated */
-};
 static reg_id_t tls_seg;
-static uint tls_offs;
-static int tls_idx;
-#define TLS_SLOT(tls_base, enum_val) (void **)((byte *)(tls_base) + tls_offs + (enum_val))
-#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, MEMTRACE_TLS_OFFS_BUF_PTR)
 
 #define MINSERT instrlist_meta_preinsert
-
-static void
-memtrace(void *drcontext)
-{
-    per_thread_t *data;
-    mem_ref_t *mem_ref, *buf_ptr;
-
-    data = drmgr_get_tls_field(drcontext, tls_idx);
-    buf_ptr = BUF_PTR(data->seg_base);
-    /* Example of dumpped file content:
-     *   0x00007f59c2d002d3:  5, call
-     *   0x00007ffeacab0ec8:  8, w
-     */
-    /* We use libc's fprintf as it is buffered and much faster than dr_fprintf
-     * for repeated printing that dominates performance, as the printing does here.
-     */
-    for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-        /* We use PIFX to avoid leading zeroes and shrink the resulting file. */
-        fprintf(data->logf, "" PIFX ": %2d, %s\n", (ptr_uint_t)mem_ref->addr,
-                mem_ref->size,
-                (mem_ref->type > REF_TYPE_WRITE)
-                    ? decode_opcode_name(mem_ref->type) /* opcode for instr */
-                    : (mem_ref->type == REF_TYPE_WRITE ? "w" : "r"));
-        data->num_refs++;
-    }
-    BUF_PTR(data->seg_base) = data->buf_base;
-}
 
 /* clean_call dumps the memory reference info to the log file */
 static void
@@ -356,8 +291,6 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
 {
     /* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
     drreg_options_t ops = { sizeof(ops), 3, false };
-    dr_set_client_name("DynamoRIO Sample Client 'memtrace'",
-                       "http://dynamorio.org/issues");
 
     log_to_stderr = true;
     
@@ -388,4 +321,6 @@ dr_client_main(client_id_t id, int argc, const char *argv[])
 
     /* make it easy to tell, by looking at log file, which client executed */
     dr_log(NULL, DR_LOG_ALL, 1, "Client 'memtrace' initializing\n");
+
+    memtrace_init();
 }

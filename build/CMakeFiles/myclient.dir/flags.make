@@ -10,3 +10,5 @@ C_INCLUDES = -I/home/ubuntu/projekte/MlConcurrencyAstAnalyser/DynamoRIO/cmake/..
 
 # Custom flags: CMakeFiles/myclient.dir/memtrace.o_FLAGS = -fno-stack-protector
 
+# Custom flags: CMakeFiles/myclient.dir/mem_inst_analyser.o_FLAGS = -fno-stack-protector
+
