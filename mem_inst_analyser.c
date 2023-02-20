@@ -25,7 +25,7 @@ typedef struct LockAccess {
    u32 thread_id;
 } LockAccess;
 
-const u64 linear_set_size_increment = 10000;
+const u64 linear_set_size_increment = 100;
 
 MemoryAccess *mem_read_set;
 u64 mem_read_set_capacity = linear_set_size_increment;
@@ -44,33 +44,47 @@ u64 lock_lock_set_capacity = linear_set_size_increment;
 u64 lock_lock_set_len = 0;
 
 
-void memtrace_init() { 
+int mem_analyse_init() { 
     mem_read_set = (MemoryAccess*)malloc(sizeof(MemoryAccess)*mem_read_set_capacity);
     if (mem_read_set == NULL) {
         printf("set allocation error \n");
-    }
+        return 0;    }
     mem_write_set = (MemoryAccess*)malloc(sizeof(MemoryAccess)*mem_write_set_capacity);
     if (mem_write_set == NULL) {
         printf("set allocation error \n");
+        return 0;
     }
 
     lock_lock_set = (LockAccess*)malloc(sizeof(LockAccess)*lock_unlock_set_capacity);
     if (lock_lock_set == NULL) {
         printf("set allocation error \n");
+        return 0;
     }
     lock_unlock_set = (LockAccess*)malloc(sizeof(LockAccess)*lock_lock_set_capacity);
     if (lock_unlock_set == NULL) {
         printf("set allocation error \n");
+        return 0;
     }
+    return 1;
+}
+
+void mem_analyse_exit() {
+    int i;
+    printf("LEAVING");
+    for (i < mem_write_set_len; i = 0; i++) {
+        printf("write access to address: %ld, size: %ld, tid: %d", mem_write_set[i].address_accessed, mem_write_set[i].size, mem_write_set[i].thread_id);
+    }
+
+    free(mem_read_set);
+    free(mem_write_set);
+    free(lock_lock_set);
+    free(lock_unlock_set);
 }
 
 void *increase_set_capacity(void *set, u64 *set_capacity) {
     *set_capacity += linear_set_size_increment;
-    void *ret = realloc(set, *set_capacity);
-    if (ret == NULL) {
-        printf("set allocation error \n");
-    }
-    return ret;
+    printf("new set_capacity: %ld \n", *set_capacity);
+    return realloc(set, *set_capacity);
 }
 
 // this is an event like fn that is envoked on every memory access (called by DynamRIO)
@@ -81,21 +95,20 @@ void memtrace(void *drcontext) {
     data = drmgr_get_tls_field(drcontext, tls_idx);
     buf_ptr = BUF_PTR(data->seg_base);
     
-    /* We use libc's fprintf as it is buffered and much faster than dr_fprintf
-     * for repeated printing that dominates performance, as the printing does here.
-     */
     for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
         if (mem_ref->type < REF_TYPE_WRITE) {
             if (mem_ref->type == REF_TYPE_WRITE) {
                 // mem write
                 if (mem_write_set_len >= mem_write_set_capacity) mem_write_set = increase_set_capacity(mem_write_set, &mem_write_set_capacity);
-                mem_write_set[mem_write_set_len].address_accessed = mem_ref->addr;
+                if (mem_write_set == NULL) exit(1);
+                mem_write_set[mem_write_set_len].address_accessed = (usize)mem_ref->addr;
                 mem_write_set[mem_write_set_len].size = mem_ref->size;
                 mem_write_set_len += 1;
             } else {
                 // mem read
                 if (mem_read_set_len >= mem_read_set_capacity) mem_read_set = increase_set_capacity(mem_read_set, &mem_read_set_capacity);
-                mem_read_set[mem_read_set_len].address_accessed = mem_ref->addr;
+                if (mem_read_set == NULL) exit(1);
+                mem_read_set[mem_read_set_len].address_accessed = (usize)mem_ref->addr;
                 mem_read_set[mem_read_set_len].size = mem_ref->size;
                 mem_read_set_len += 1;
             }

@@ -42,4 +42,5 @@ uint tls_offs;
 #define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, MEMTRACE_TLS_OFFS_BUF_PTR)
 
 extern void memtrace(void *drcontext);
-extern void memtrace_init();
+extern int mem_analyse_init();
+extern void mem_analyse_exit();

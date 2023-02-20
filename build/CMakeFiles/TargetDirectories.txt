@@ -1,3 +1,0 @@
-/home/ubuntu/projekte/MlConcurrencyAstAnalyser/build/CMakeFiles/rebuild_cache.dir
-/home/ubuntu/projekte/MlConcurrencyAstAnalyser/build/CMakeFiles/edit_cache.dir
-/home/ubuntu/projekte/MlConcurrencyAstAnalyser/build/CMakeFiles/myclient.dir
