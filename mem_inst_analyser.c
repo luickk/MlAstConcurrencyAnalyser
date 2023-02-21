@@ -7,8 +7,10 @@
 #include "drutil.h"
 #include "drx.h"
 
-#include "include/types.h"
 #include "include/memtrace.h"
+
+#define MAX_THREADS 100
+const u64 linear_set_size_increment = 100;
 
 // todo => shrink to 8 bytes. Should be possible if memory address access/accessing only store 
 // bytes of the virtual address that define the memory locations relative to the process pages)
@@ -25,60 +27,88 @@ typedef struct LockAccess {
    u32 thread_id;
 } LockAccess;
 
-const u64 linear_set_size_increment = 100;
+typedef struct ThreadState {
+    u64 idx;
+    MemoryAccess *mem_read_set;
+    u64 mem_read_set_capacity;
+    u64 mem_read_set_len;
 
-MemoryAccess *mem_read_set;
-u64 mem_read_set_capacity = linear_set_size_increment;
-u64 mem_read_set_len = 0;
+    MemoryAccess *mem_write_set;
+    u64 mem_write_set_capacity;
+    u64 mem_write_set_len;
 
-MemoryAccess *mem_write_set;
-u64 mem_write_set_capacity = linear_set_size_increment;
-u64 mem_write_set_len = 0;
+    LockAccess *lock_unlock_set;
+    u64 lock_unlock_set_capacity;
+    u64 lock_unlock_set_len;
 
-LockAccess *lock_unlock_set;
-u64 lock_unlock_set_capacity = linear_set_size_increment;
-u64 lock_unlock_set_len = 0;
+    LockAccess *lock_lock_set;
+    u64 lock_lock_set_capacity;
+    u64 lock_lock_set_len;
+} ThreadState;
+ThreadState threads[MAX_THREADS] = {};
+u64 n_threads = 0;
 
-LockAccess *lock_lock_set;
-u64 lock_lock_set_capacity = linear_set_size_increment;
-u64 lock_lock_set_len = 0;
+i64 findThreadByTlsIdx(u64 idx) {
+    u64 i;
+    for (i = 0; i <= n_threads; i++) {
+        printf("1 \n");
+        printf("threads[i].idx: %lu idx: %lu \n", threads[i].idx, idx);
+        if (threads[i].idx == idx) {
+            return i;
+        }
+    }
+    return -1;
+}
+u32 mem_analyse_init() { 
+        return 1;
+}
 
+u32 mem_analyse_new_thread_init() {
+    if (n_threads >= MAX_THREADS) return 0;
+    threads[n_threads].idx = tls_idx;
 
-int mem_analyse_init() { 
-    mem_read_set = (MemoryAccess*)malloc(sizeof(MemoryAccess)*mem_read_set_capacity);
-    if (mem_read_set == NULL) {
+    threads[n_threads].mem_read_set = (MemoryAccess*)malloc(sizeof(MemoryAccess) * linear_set_size_increment);
+    threads[n_threads].mem_read_set_capacity = linear_set_size_increment;
+    if (threads[n_threads].mem_read_set == NULL) {
         printf("set allocation error \n");
-        return 0;    }
-    mem_write_set = (MemoryAccess*)malloc(sizeof(MemoryAccess)*mem_write_set_capacity);
-    if (mem_write_set == NULL) {
+        return 0;    
+    }
+    threads[n_threads].mem_write_set = (MemoryAccess*)malloc(sizeof(MemoryAccess) * linear_set_size_increment);
+    threads[n_threads].mem_write_set_capacity = linear_set_size_increment;
+    if (threads[n_threads].mem_write_set == NULL) {
         printf("set allocation error \n");
         return 0;
     }
 
-    lock_lock_set = (LockAccess*)malloc(sizeof(LockAccess)*lock_unlock_set_capacity);
-    if (lock_lock_set == NULL) {
+    threads[n_threads].lock_lock_set = (LockAccess*)malloc(sizeof(LockAccess) * linear_set_size_increment);
+    threads[n_threads].lock_lock_set_capacity = linear_set_size_increment;
+    if (threads[n_threads].lock_lock_set == NULL) {
         printf("set allocation error \n");
         return 0;
     }
-    lock_unlock_set = (LockAccess*)malloc(sizeof(LockAccess)*lock_lock_set_capacity);
-    if (lock_unlock_set == NULL) {
+    threads[n_threads].lock_unlock_set = (LockAccess*)malloc(sizeof(LockAccess) * linear_set_size_increment);
+    threads[n_threads].lock_unlock_set_capacity = linear_set_size_increment;    
+    if (threads[n_threads].lock_unlock_set == NULL) {
         printf("set allocation error \n");
         return 0;
     }
+
+    n_threads += 1;
     return 1;
 }
 
-void mem_analyse_exit() {
-    int i;
+void mem_analyse_thread_exit() {
+    i64 t_index = findThreadByTlsIdx(tls_idx);
     printf("LEAVING");
-    for (i < mem_write_set_len; i = 0; i++) {
-        printf("write access to address: %ld, size: %ld, tid: %d", mem_write_set[i].address_accessed, mem_write_set[i].size, mem_write_set[i].thread_id);
+    u64 i;
+    for (i = 0; i < threads[t_index].mem_write_set_len; i++) {
+        printf("write access to address: %ld, size: %ld, tid: %d", threads[t_index].mem_write_set[i].address_accessed, threads[t_index].mem_write_set[i].size, threads[t_index].mem_write_set[i].thread_id);
     }
 
-    free(mem_read_set);
-    free(mem_write_set);
-    free(lock_lock_set);
-    free(lock_unlock_set);
+    free(threads[t_index].mem_read_set);
+    free(threads[t_index].mem_write_set);
+    free(threads[t_index].lock_lock_set);
+    free(threads[t_index].lock_unlock_set);
 }
 
 void *increase_set_capacity(void *set, u64 *set_capacity) {
@@ -95,24 +125,33 @@ void memtrace(void *drcontext) {
     data = drmgr_get_tls_field(drcontext, tls_idx);
     buf_ptr = BUF_PTR(data->seg_base);
     
+    i64 t_index = findThreadByTlsIdx(tls_idx);
+    if (t_index < 0) {
+        printf("error finding tls_idx. %ld \n", t_index);
+        return;    
+    } 
     for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
+        printf("lol1 \n");
         if (mem_ref->type < REF_TYPE_WRITE) {
             if (mem_ref->type == REF_TYPE_WRITE) {
                 // mem write
-                if (mem_write_set_len >= mem_write_set_capacity) mem_write_set = increase_set_capacity(mem_write_set, &mem_write_set_capacity);
-                if (mem_write_set == NULL) exit(1);
-                mem_write_set[mem_write_set_len].address_accessed = (usize)mem_ref->addr;
-                mem_write_set[mem_write_set_len].size = mem_ref->size;
-                mem_write_set_len += 1;
+                if (threads[t_index].mem_write_set_len >= threads[t_index].mem_write_set_capacity) threads[t_index].mem_write_set = increase_set_capacity(threads[t_index].mem_write_set, &threads[t_index].mem_write_set_capacity);
+                if (threads[t_index].mem_write_set == NULL) exit(1);
+                threads[t_index].mem_write_set[threads[t_index].mem_write_set_len].address_accessed = (usize)mem_ref->addr;
+                threads[t_index].mem_write_set[threads[t_index].mem_write_set_len].size = mem_ref->size;
+                threads[t_index].mem_write_set_len += 1;
             } else {
                 // mem read
-                if (mem_read_set_len >= mem_read_set_capacity) mem_read_set = increase_set_capacity(mem_read_set, &mem_read_set_capacity);
-                if (mem_read_set == NULL) exit(1);
-                mem_read_set[mem_read_set_len].address_accessed = (usize)mem_ref->addr;
-                mem_read_set[mem_read_set_len].size = mem_ref->size;
-                mem_read_set_len += 1;
+                if (threads[t_index].mem_read_set_len >= threads[t_index].mem_read_set_capacity) threads[t_index].mem_read_set = increase_set_capacity(threads[t_index].mem_read_set, &threads[t_index].mem_read_set_capacity);
+                if (threads[t_index].mem_read_set == NULL) exit(1);
+                printf("AAAAAAAAAAAAAAAAAAAAAA1\n");
+                printf("t_index: %ld len %ld \n", t_index, threads[t_index].mem_read_set_len);
+                threads[t_index].mem_read_set[threads[t_index].mem_read_set_len].address_accessed = (usize)mem_ref->addr;
+                printf("AAAAAAAAAAAAAAAAAAAAAA2\n");
+                threads[t_index].mem_read_set_len += 1;
             }
         }
+        printf("lol\n");
         /* We use PIFX to avoid leading zeroes and shrink the resulting file. */
         fprintf(data->logf, "" PIFX ": %2d, %s\n", (ptr_uint_t)mem_ref->addr,
                 mem_ref->size,

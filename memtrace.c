@@ -9,25 +9,25 @@
 
 #include "include/memtrace.h"
 
-client_id_t client_id;
-void *mutex;        /* for multithread support */
-uint64 num_refs;    /* keep a global memory reference count */
+static client_id_t client_id;
+static void *mutex;        /* for multithread support */
+static uint64 num_refs;    /* keep a global memory reference count */
 
-reg_id_t tls_seg;
+static reg_id_t tls_seg;
 
 #define MINSERT instrlist_meta_preinsert
 /* clean_call dumps the memory reference info to the log file */
-void clean_call(void) {
+static void clean_call(void) {
     void *drcontext = dr_get_current_drcontext();
     memtrace(drcontext);
 }
 
-void insert_load_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr) {
+static void insert_load_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t reg_ptr) {
     dr_insert_read_raw_tls(drcontext, ilist, where, tls_seg,
                            tls_offs + MEMTRACE_TLS_OFFS_BUF_PTR, reg_ptr);
 }
 
-void insert_update_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where,
+static void insert_update_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where,
                       reg_id_t reg_ptr, int adjust) {
     MINSERT(
         ilist, where,
@@ -36,7 +36,7 @@ void insert_update_buf_ptr(void *drcontext, instrlist_t *ilist, instr_t *where,
                             tls_offs + MEMTRACE_TLS_OFFS_BUF_PTR, reg_ptr);
 }
 
-void insert_save_type(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
+static void insert_save_type(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
                  reg_id_t scratch, ushort type) {
     scratch = reg_resize_to_opsz(scratch, OPSZ_2);
     MINSERT(ilist, where,
@@ -48,7 +48,7 @@ void insert_save_type(void *drcontext, instrlist_t *ilist, instr_t *where, reg_i
                                       opnd_create_reg(scratch)));
 }
 
-void insert_save_size(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
+static void insert_save_size(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
                  reg_id_t scratch, ushort size) {
     scratch = reg_resize_to_opsz(scratch, OPSZ_2);
     MINSERT(ilist, where,
@@ -60,7 +60,7 @@ void insert_save_size(void *drcontext, instrlist_t *ilist, instr_t *where, reg_i
                                       opnd_create_reg(scratch)));
 }
 
-void insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
+static void insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_t base,
                reg_id_t scratch, app_pc pc) {
     instrlist_insert_mov_immed_ptrsz(drcontext, (ptr_int_t)pc, opnd_create_reg(scratch),
                                      ilist, where, NULL, NULL);
@@ -70,7 +70,7 @@ void insert_save_pc(void *drcontext, instrlist_t *ilist, instr_t *where, reg_id_
                                opnd_create_reg(scratch)));
 }
 
-void insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref,
+static void insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref,
                  reg_id_t reg_ptr, reg_id_t reg_addr) {
     bool ok;
     /* we use reg_ptr as scratch to get addr */
@@ -84,7 +84,7 @@ void insert_save_addr(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_
 }
 
 /* insert inline code to add an instruction entry into the buffer */
-void instrument_instr(void *drcontext, instrlist_t *ilist, instr_t *where, instr_t *instr) {
+static void instrument_instr(void *drcontext, instrlist_t *ilist, instr_t *where, instr_t *instr) {
     /* We need two scratch registers */
     reg_id_t reg_ptr, reg_tmp;
     /* we don't want to predicate this, because an instruction fetch always occurs */
@@ -111,7 +111,7 @@ void instrument_instr(void *drcontext, instrlist_t *ilist, instr_t *where, instr
 }
 
 /* insert inline code to add a memory reference info entry into the buffer */
-void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref,
+static void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t ref,
                bool write) {
     /* We need two scratch registers */
     reg_id_t reg_ptr, reg_tmp;
@@ -138,8 +138,7 @@ void instrument_mem(void *drcontext, instrlist_t *ilist, instr_t *where, opnd_t 
 /* For each memory reference app instr, we insert inline code to fill the buffer
  * with an instruction entry and memory reference entries.
  */
-dr_emit_flags_t
-event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *where,
+static dr_emit_flags_t event_app_instruction(void *drcontext, void *tag, instrlist_t *bb, instr_t *where,
                       bool for_trace, bool translating, void *user_data) {
     int i;
 
@@ -204,7 +203,8 @@ dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bo
     return DR_EMIT_DEFAULT;
 }
 
-void event_thread_init(void *drcontext) {
+static void event_thread_init(void *drcontext) {
+    if(!mem_analyse_new_thread_init()) DR_ASSERT(false);
     per_thread_t *data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
     DR_ASSERT(data != NULL);
     drmgr_set_tls_field(drcontext, tls_idx, data);
@@ -213,8 +213,7 @@ void event_thread_init(void *drcontext) {
      * slot and find where the pointer points to in the buffer.
      */
     data->seg_base = dr_get_dr_segment_base(tls_seg);
-    data->buf_base =
-        dr_raw_mem_alloc(MEM_BUF_SIZE, DR_MEMPROT_READ | DR_MEMPROT_WRITE, NULL);
+    data->buf_base = dr_raw_mem_alloc(MEM_BUF_SIZE, DR_MEMPROT_READ | DR_MEMPROT_WRITE, NULL);
     DR_ASSERT(data->seg_base != NULL && data->buf_base != NULL);
     /* put buf_base to TLS as starting buf_ptr */
     BUF_PTR(data->seg_base) = data->buf_base;
@@ -224,7 +223,8 @@ void event_thread_init(void *drcontext) {
     printf("Format: <data address>: <data size>, <(r)ead/(w)rite/opcode>\n");
 }
 
-void event_thread_exit(void *drcontext) {
+static void event_thread_exit(void *drcontext) {
+    mem_analyse_thread_exit();
     per_thread_t *data;
     memtrace(drcontext); /* dump any remaining buffer entries */
     data = drmgr_get_tls_field(drcontext, tls_idx);
@@ -235,7 +235,7 @@ void event_thread_exit(void *drcontext) {
     dr_thread_free(drcontext, data, sizeof(per_thread_t));
 }
 
-void event_exit(void) {
+static void event_exit(void) {
     mem_analyse_exit();
 
     if (!dr_raw_tls_cfree(tls_offs, MEMTRACE_TLS_COUNT))

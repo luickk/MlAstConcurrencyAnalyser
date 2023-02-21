@@ -1,3 +1,5 @@
+#include "types.h"
+
 enum {
     REF_TYPE_READ = 0,
     REF_TYPE_WRITE = 1,
@@ -42,5 +44,7 @@ uint tls_offs;
 #define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, MEMTRACE_TLS_OFFS_BUF_PTR)
 
 extern void memtrace(void *drcontext);
-extern int mem_analyse_init();
+extern u32 mem_analyse_init();
 extern void mem_analyse_exit();
+extern void mem_analyse_thread_exit();
+extern u32 mem_analyse_new_thread_init();
