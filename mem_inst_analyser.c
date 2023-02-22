@@ -10,7 +10,7 @@
 #include "include/memtrace.h"
 
 #define MAX_THREADS 100
-const u64 linear_set_size_increment = 100;
+const u64 linear_set_size_increment = 100000;
 
 // todo => shrink to 8 bytes. Should be possible if memory address access/accessing only store 
 // bytes of the virtual address that define the memory locations relative to the process pages)
@@ -51,19 +51,39 @@ u64 n_threads = 0;
 i64 findThreadByTlsIdx(u64 idx) {
     u64 i;
     for (i = 0; i <= n_threads; i++) {
-        printf("1 \n");
-        printf("threads[i].idx: %lu idx: %lu \n", threads[i].idx, idx);
         if (threads[i].idx == idx) {
             return i;
         }
     }
     return -1;
 }
+
+void mem_analyse_exit() { 
+    u64 j;
+    for (j = 0; j < n_threads; j++) {
+        u64 i;
+        printf("mem_write_set_len: %ld \n", threads[j].mem_write_set_len);
+        printf("mem_read_set_len: %ld \n", threads[j].mem_read_set_len);
+        // for (i = 0; i < threads[j].mem_write_set_len; i++) {
+        //     printf("write access to address: %ld, size: %ld, tid: %d \n", threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, threads[j].mem_write_set[i].thread_id);
+        // }
+        // for (i = 0; i < threads[j].mem_read_set_len; i++) {
+        //     printf("read access to address: %ld, size: %ld, tid: %d \n", threads[j].mem_read_set[i].address_accessed, threads[j].mem_read_set[i].size, threads[j].mem_read_set[i].thread_id);
+        // }
+
+        free(threads[j].mem_write_set);
+        free(threads[j].mem_read_set);
+        free(threads[j].lock_lock_set);
+        free(threads[j].lock_unlock_set);
+    }
+}
+
 u32 mem_analyse_init() { 
         return 1;
 }
 
 u32 mem_analyse_new_thread_init() {
+    printf("new thread inited \n");
     if (n_threads >= MAX_THREADS) return 0;
     threads[n_threads].idx = tls_idx;
 
@@ -98,17 +118,7 @@ u32 mem_analyse_new_thread_init() {
 }
 
 void mem_analyse_thread_exit() {
-    i64 t_index = findThreadByTlsIdx(tls_idx);
-    printf("LEAVING");
-    u64 i;
-    for (i = 0; i < threads[t_index].mem_write_set_len; i++) {
-        printf("write access to address: %ld, size: %ld, tid: %d", threads[t_index].mem_write_set[i].address_accessed, threads[t_index].mem_write_set[i].size, threads[t_index].mem_write_set[i].thread_id);
-    }
-
-    free(threads[t_index].mem_read_set);
-    free(threads[t_index].mem_write_set);
-    free(threads[t_index].lock_lock_set);
-    free(threads[t_index].lock_unlock_set);
+    printf("thread exit \n");
 }
 
 void *increase_set_capacity(void *set, u64 *set_capacity) {
@@ -129,35 +139,32 @@ void memtrace(void *drcontext) {
     if (t_index < 0) {
         printf("error finding tls_idx. %ld \n", t_index);
         return;    
-    } 
+    }
+    ThreadState *curr_thread = &threads[t_index];
     for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-        printf("lol1 \n");
         if (mem_ref->type < REF_TYPE_WRITE) {
             if (mem_ref->type == REF_TYPE_WRITE) {
                 // mem write
-                if (threads[t_index].mem_write_set_len >= threads[t_index].mem_write_set_capacity) threads[t_index].mem_write_set = increase_set_capacity(threads[t_index].mem_write_set, &threads[t_index].mem_write_set_capacity);
-                if (threads[t_index].mem_write_set == NULL) exit(1);
-                threads[t_index].mem_write_set[threads[t_index].mem_write_set_len].address_accessed = (usize)mem_ref->addr;
-                threads[t_index].mem_write_set[threads[t_index].mem_write_set_len].size = mem_ref->size;
-                threads[t_index].mem_write_set_len += 1;
+                if (curr_thread->mem_write_set_len >= curr_thread->mem_write_set_capacity) curr_thread->mem_write_set = increase_set_capacity(curr_thread->mem_write_set, &curr_thread->mem_write_set_capacity);
+                if (curr_thread->mem_write_set == NULL) exit(1);
+                curr_thread->mem_write_set[curr_thread->mem_write_set_len].address_accessed = (usize)mem_ref->addr;
+                curr_thread->mem_write_set[curr_thread->mem_write_set_len].size = mem_ref->size;
+                curr_thread->mem_write_set_len += 1;
             } else {
                 // mem read
-                if (threads[t_index].mem_read_set_len >= threads[t_index].mem_read_set_capacity) threads[t_index].mem_read_set = increase_set_capacity(threads[t_index].mem_read_set, &threads[t_index].mem_read_set_capacity);
-                if (threads[t_index].mem_read_set == NULL) exit(1);
-                printf("AAAAAAAAAAAAAAAAAAAAAA1\n");
-                printf("t_index: %ld len %ld \n", t_index, threads[t_index].mem_read_set_len);
-                threads[t_index].mem_read_set[threads[t_index].mem_read_set_len].address_accessed = (usize)mem_ref->addr;
-                printf("AAAAAAAAAAAAAAAAAAAAAA2\n");
-                threads[t_index].mem_read_set_len += 1;
+                if (curr_thread->mem_read_set_len >= curr_thread->mem_read_set_capacity) curr_thread->mem_read_set = increase_set_capacity(curr_thread->mem_read_set, &curr_thread->mem_read_set_capacity);
+                if (curr_thread->mem_read_set == NULL) exit(1);
+                curr_thread->mem_read_set[curr_thread->mem_read_set_len].address_accessed = (usize)mem_ref->addr;
+                curr_thread->mem_read_set[curr_thread->mem_read_set_len].size = mem_ref->size;
+                curr_thread->mem_read_set_len += 1;
             }
         }
-        printf("lol\n");
-        /* We use PIFX to avoid leading zeroes and shrink the resulting file. */
-        fprintf(data->logf, "" PIFX ": %2d, %s\n", (ptr_uint_t)mem_ref->addr,
-                mem_ref->size,
-                (mem_ref->type > REF_TYPE_WRITE)
-                    ? decode_opcode_name(mem_ref->type) /* opcode for instr */
-                    : (mem_ref->type == REF_TYPE_WRITE ? "w" : "r"));
+        // // /* We use PIFX to avoid leading zeroes and shrink the resulting file. */
+        // fprintf(data->logf, "" PIFX ": %2d, %s\n", (ptr_uint_t)mem_ref->addr,
+        //         mem_ref->size,
+        //         (mem_ref->type > REF_TYPE_WRITE)
+        //             ? decode_opcode_name(mem_ref->type) /* opcode for instr */
+        //             : (mem_ref->type == REF_TYPE_WRITE ? "w" : "r"));
         data->num_refs++;
     }
     BUF_PTR(data->seg_base) = data->buf_base;
