@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stddef.h> /* for offsetof */
 #include <string.h>
+#include <sys/syscall.h>
 #include "dr_api.h"
 #include "drmgr.h"
 #include "drreg.h"
@@ -203,6 +204,75 @@ dr_emit_flags_t event_bb_app2app(void *drcontext, void *tag, instrlist_t *bb, bo
     return DR_EMIT_DEFAULT;
 }
 
+#define SHOW_RESULTS
+#ifdef SHOW_RESULTS
+    char msg[512];
+    int len;
+    len = dr_snprintf(msg, sizeof(msg) / sizeof(msg[0]),
+                      "<Number of system calls seen: %d>", num_syscalls);
+    DR_ASSERT(len > 0);
+    msg[sizeof(msg) / sizeof(msg[0]) - 1] = '\0';
+    DISPLAY_STRING(msg);
+#endif /* SHOW_RESULTS */
+}
+
+static bool
+event_pre_syscall(void *drcontext, int sysnum)
+{
+    bool modify_write = (sysnum == write_sysnum);
+    dr_atomic_add32_return_sum(&num_syscalls, 1);
+    if (sysnum == SYS_execve) {
+        /* our stats will be re-set post-execve so display now */
+        show_results();
+#    ifdef SHOW_RESULTS
+        dr_fprintf(STDERR, "<---- execve ---->\n");
+#    endif
+    }
+
+#ifndef SHOW_RESULTS
+    /* for sanity tests that don't show results we don't change the app's output */
+    modify_write = false;
+#endif
+    if (modify_write) {
+        /* store params for access post-syscall */
+        int i;
+        per_thread_t *data = (per_thread_t *)drmgr_get_cls_field(drcontext, tls_idx);
+        for (i = 0; i < SYS_MAX_ARGS; i++)
+            data->param[i] = dr_syscall_get_param(drcontext, i);
+        /* suppress stderr */
+        if (dr_syscall_get_param(drcontext, 0) == (reg_t)STDERR) {
+            /* pretend it succeeded */
+#ifdef UNIX
+            /* return the #bytes == 3rd param */
+            dr_syscall_result_info_t info = {
+                sizeof(info),
+            };
+            info.succeeded = true;
+            info.value = dr_syscall_get_param(drcontext, 2);
+            dr_syscall_set_result_ex(drcontext, &info);
+#else
+            /* XXX: we should also set the IO_STATUS_BLOCK.Information field */
+            dr_syscall_set_result(drcontext, 0);
+#endif
+#ifdef SHOW_RESULTS
+            dr_fprintf(STDERR, "<---- skipping write to stderr ---->\n");
+#endif
+            return false; /* skip syscall */
+        } else if (dr_syscall_get_param(drcontext, 0) == (reg_t)STDOUT) {
+            if (!data->repeat) {
+                /* redirect stdout to stderr (unless it's our repeat) */
+#ifdef SHOW_RESULTS
+                dr_fprintf(STDERR, "<---- changing stdout to stderr ---->\n");
+#endif
+                dr_syscall_set_param(drcontext, 0, (reg_t)STDERR);
+            }
+            /* we're going to repeat this syscall once */
+            data->repeat = !data->repeat;
+        }
+    }
+    return true; /* execute normally */
+}
+
 static void event_thread_init(void *drcontext) {
     if(!mem_analyse_new_thread_init()) DR_ASSERT(false);
     per_thread_t *data = dr_thread_alloc(drcontext, sizeof(per_thread_t));
@@ -244,6 +314,7 @@ static void event_exit(void) {
     if (!drmgr_unregister_tls_field(tls_idx) ||
         !drmgr_unregister_thread_init_event(event_thread_init) ||
         !drmgr_unregister_thread_exit_event(event_thread_exit) ||
+        !drmgr_unregister_pre_syscall_event(event_pre_syscall) ||
         !drmgr_unregister_bb_app2app_event(event_bb_app2app) ||
         !drmgr_unregister_bb_insertion_event(event_app_instruction) ||
         drreg_exit() != DRREG_SUCCESS)
@@ -269,6 +340,7 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     dr_register_exit_event(event_exit);
     if (!drmgr_register_thread_init_event(event_thread_init) ||
         !drmgr_register_thread_exit_event(event_thread_exit) ||
+        !drmgr_register_pre_syscall_event(event_pre_syscall) ||
         !drmgr_register_bb_app2app_event(event_bb_app2app, NULL) ||
         !drmgr_register_bb_instrumentation_event(NULL /*analysis_func*/,
                                                  event_app_instruction, NULL))

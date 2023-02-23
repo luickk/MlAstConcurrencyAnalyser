@@ -1,5 +1,9 @@
 #include "types.h"
 
+#define SYS_MAX_ARGS 3
+#define TLS_SLOT(tls_base, enum_val) (void **)((byte *)(tls_base) + tls_offs + (enum_val))
+#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, MEMTRACE_TLS_OFFS_BUF_PTR)
+
 enum {
     REF_TYPE_READ = 0,
     REF_TYPE_WRITE = 1,
@@ -29,6 +33,9 @@ typedef struct {
     file_t log;
     FILE *logf;
     uint64 num_refs;
+    
+    reg_t param[SYS_MAX_ARGS];
+    bool repeat;
 } per_thread_t;
 
 /* Allocated TLS slot offsets */
@@ -40,8 +47,8 @@ enum {
 int tls_idx;
 uint tls_offs;
 
-#define TLS_SLOT(tls_base, enum_val) (void **)((byte *)(tls_base) + tls_offs + (enum_val))
-#define BUF_PTR(tls_base) *(mem_ref_t **)TLS_SLOT(tls_base, MEMTRACE_TLS_OFFS_BUF_PTR)
+int write_sysnum;
+int num_syscalls;
 
 extern void memtrace(void *drcontext);
 extern u32 mem_analyse_init();

@@ -65,12 +65,12 @@ void mem_analyse_exit() {
         u64 i;
         printf("mem_write_set_len: %ld \n", threads[j].mem_write_set_len);
         printf("mem_read_set_len: %ld \n", threads[j].mem_read_set_len);
-        for (i = 0; i < threads[j].mem_write_set_len; i++) {
-            printf("[%d]tid write access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));        
-        }
-        for (i = 0; i < threads[j].mem_read_set_len; i++) {
-            printf("[%d]tid read access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_read_set[i].address_accessed, threads[j].mem_read_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));
-        }
+        // for (i = 0; i < threads[j].mem_write_set_len; i++) {
+        //     printf("[%d]tid write access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));        
+        // }
+        // for (i = 0; i < threads[j].mem_read_set_len; i++) {
+        //     printf("[%d]tid read access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_read_set[i].address_accessed, threads[j].mem_read_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));
+        // }
 
         free(threads[j].mem_write_set);
         free(threads[j].mem_read_set);
