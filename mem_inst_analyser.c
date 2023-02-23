@@ -10,7 +10,7 @@
 #include "include/memtrace.h"
 
 #define MAX_THREADS 100
-const u64 linear_set_size_increment = 100000;
+const u64 linear_set_size_increment = 1000000;
 
 // todo => shrink to 8 bytes. Should be possible if memory address access/accessing only store 
 // bytes of the virtual address that define the memory locations relative to the process pages)
@@ -18,6 +18,7 @@ const u64 linear_set_size_increment = 100000;
 // abstract: only the last 28 bits of an virtual address encode the actual loation(or index) of the address, the rest is context
 typedef struct MemoryAccess {
    usize address_accessed;
+   u16 opcode;
    u64 size;
    u32 thread_id;
 } MemoryAccess;
@@ -64,12 +65,12 @@ void mem_analyse_exit() {
         u64 i;
         printf("mem_write_set_len: %ld \n", threads[j].mem_write_set_len);
         printf("mem_read_set_len: %ld \n", threads[j].mem_read_set_len);
-        // for (i = 0; i < threads[j].mem_write_set_len; i++) {
-        //     printf("write access to address: %ld, size: %ld, tid: %d \n", threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, threads[j].mem_write_set[i].thread_id);
-        // }
-        // for (i = 0; i < threads[j].mem_read_set_len; i++) {
-        //     printf("read access to address: %ld, size: %ld, tid: %d \n", threads[j].mem_read_set[i].address_accessed, threads[j].mem_read_set[i].size, threads[j].mem_read_set[i].thread_id);
-        // }
+        for (i = 0; i < threads[j].mem_write_set_len; i++) {
+            printf("[%d]tid write access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));        
+        }
+        for (i = 0; i < threads[j].mem_read_set_len; i++) {
+            printf("[%d]tid read access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_read_set[i].address_accessed, threads[j].mem_read_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));
+        }
 
         free(threads[j].mem_write_set);
         free(threads[j].mem_read_set);
@@ -142,29 +143,30 @@ void memtrace(void *drcontext) {
     }
     ThreadState *curr_thread = &threads[t_index];
     for (mem_ref = (mem_ref_t *)data->buf_base; mem_ref < buf_ptr; mem_ref++) {
-        if (mem_ref->type < REF_TYPE_WRITE) {
-            if (mem_ref->type == REF_TYPE_WRITE) {
-                // mem write
-                if (curr_thread->mem_write_set_len >= curr_thread->mem_write_set_capacity) curr_thread->mem_write_set = increase_set_capacity(curr_thread->mem_write_set, &curr_thread->mem_write_set_capacity);
-                if (curr_thread->mem_write_set == NULL) exit(1);
-                curr_thread->mem_write_set[curr_thread->mem_write_set_len].address_accessed = (usize)mem_ref->addr;
-                curr_thread->mem_write_set[curr_thread->mem_write_set_len].size = mem_ref->size;
-                curr_thread->mem_write_set_len += 1;
-            } else {
-                // mem read
-                if (curr_thread->mem_read_set_len >= curr_thread->mem_read_set_capacity) curr_thread->mem_read_set = increase_set_capacity(curr_thread->mem_read_set, &curr_thread->mem_read_set_capacity);
-                if (curr_thread->mem_read_set == NULL) exit(1);
-                curr_thread->mem_read_set[curr_thread->mem_read_set_len].address_accessed = (usize)mem_ref->addr;
-                curr_thread->mem_read_set[curr_thread->mem_read_set_len].size = mem_ref->size;
-                curr_thread->mem_read_set_len += 1;
-            }
+        if (mem_ref->type == 1 || mem_ref->type == 457 || mem_ref->type == 458 || mem_ref->type == 456 || mem_ref->type == 568) {
+            // mem write
+            if (curr_thread->mem_write_set_len >= curr_thread->mem_write_set_capacity) curr_thread->mem_write_set = increase_set_capacity(curr_thread->mem_write_set, &curr_thread->mem_write_set_capacity);
+            if (curr_thread->mem_write_set == NULL) exit(1);
+            curr_thread->mem_write_set[curr_thread->mem_write_set_len].address_accessed = (usize)mem_ref->addr;
+            curr_thread->mem_write_set[curr_thread->mem_write_set_len].opcode = mem_ref->type;
+            curr_thread->mem_write_set[curr_thread->mem_write_set_len].thread_id = tls_idx;
+            curr_thread->mem_write_set[curr_thread->mem_write_set_len].size = mem_ref->size;
+            curr_thread->mem_write_set_len += 1;
+        } else if(mem_ref->type == 0 || mem_ref->type == 227 || mem_ref->type == 225 || mem_ref->type == 197 || mem_ref->type == 228 || mem_ref->type == 229 || mem_ref->type == 299 || mem_ref->type == 173) {
+            // mem read
+            if (curr_thread->mem_read_set_len >= curr_thread->mem_read_set_capacity) curr_thread->mem_read_set = increase_set_capacity(curr_thread->mem_read_set, &curr_thread->mem_read_set_capacity);
+            if (curr_thread->mem_read_set == NULL) exit(1);
+            curr_thread->mem_read_set[curr_thread->mem_read_set_len].address_accessed = (usize)mem_ref->addr;
+            curr_thread->mem_read_set[curr_thread->mem_read_set_len].opcode = mem_ref->type;
+            curr_thread->mem_read_set[curr_thread->mem_read_set_len].thread_id = tls_idx;
+            curr_thread->mem_read_set[curr_thread->mem_read_set_len].size = mem_ref->size;
+            curr_thread->mem_read_set_len += 1;
         }
+        //  else {
+        //     printf("missed %d \n", mem_ref->type);        
+        // }
         // // /* We use PIFX to avoid leading zeroes and shrink the resulting file. */
-        // fprintf(data->logf, "" PIFX ": %2d, %s\n", (ptr_uint_t)mem_ref->addr,
-        //         mem_ref->size,
-        //         (mem_ref->type > REF_TYPE_WRITE)
-        //             ? decode_opcode_name(mem_ref->type) /* opcode for instr */
-        //             : (mem_ref->type == REF_TYPE_WRITE ? "w" : "r"));
+        // fprintf(data->logf, "" PIFX ": %2d, %s (%d)\n", (ptr_uint_t)mem_ref->addr, mem_ref->size, (mem_ref->type > REF_TYPE_WRITE) ? decode_opcode_name(mem_ref->type) /* opcode for instr */ : (mem_ref->type == REF_TYPE_WRITE ? "w" : "r"), mem_ref->type);
         data->num_refs++;
     }
     BUF_PTR(data->seg_base) = data->buf_base;
