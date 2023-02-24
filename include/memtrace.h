@@ -33,7 +33,7 @@ typedef struct {
     file_t log;
     FILE *logf;
     uint64 num_refs;
-    
+
     reg_t param[SYS_MAX_ARGS];
     bool repeat;
 } per_thread_t;
@@ -47,7 +47,6 @@ enum {
 int tls_idx;
 uint tls_offs;
 
-int write_sysnum;
 int num_syscalls;
 
 extern void memtrace(void *drcontext);

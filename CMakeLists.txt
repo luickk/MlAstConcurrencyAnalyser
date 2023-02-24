@@ -1,5 +1,5 @@
 project(sample)
-add_library(myclient SHARED memtrace.c mem_inst_analyser.c)
+add_library(myclient SHARED memtrace.c data_collector.c)
 target_include_directories(myclient PRIVATE ${include/})
 find_package(DynamoRIO PATHS DynamoRIO/cmake)
 if (NOT DynamoRIO_FOUND)

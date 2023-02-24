@@ -1,8 +1,8 @@
-# Machine Learning based AST Concurrency Analyzer
+# Concurrency analasys based on run/compile time data Ml training
 
-The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of AST code without being trained on a dataset.
+The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of AST code(with runntime data) without being trained on a dataset.
 
-Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
+Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping a certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
 
 # Todo
 
@@ -35,7 +35,7 @@ It's difficult to find information on how modern thread sanitizers work and exis
 Since the approach of this project to generate a proper dataset for the Ml model is a mix of run and compiletime data, both AST code and runtime information need to be combined into one graph.
 For AST parsing and analysis, LLVM offers libclang which is really handy and covers all requirements. 
 
-In order to generate a somewhat complete graph, we need the memory access information, which can only be read through memory instrumentation and binary patching.
+In order to generate a somewhat complete graph, we need the memory access information, which can only be read through memory instrumentation.
 Intercepting function calls alone will not be enough but could have been easily achieved through [Clangs natively supported](https://maskray.me/blog/2023-01-08-all-about-sanitizer-interceptors) fn wrapper functionality. 
 
 For memory instrumentation, there are multiple external tools available.
