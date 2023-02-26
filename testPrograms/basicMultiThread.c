@@ -6,8 +6,6 @@
 // Let us create a global variable to change it in threads
 int g = 0;
 
-int initialized = 0;
-
 // The function to be executed by all threads
 void *myThreadFun(void *vargp) {
 	// Store the value argument passed to this thread
@@ -26,7 +24,6 @@ void *myThreadFun(void *vargp) {
 }
 
 int main() {
-	initialized = 1;
 	int i;
 	pthread_t tid;
 
