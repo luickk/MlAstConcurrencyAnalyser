@@ -50,39 +50,6 @@ typedef struct ThreadState {
 ThreadState threads[MAX_THREADS] = {};
 u64 n_threads = 0;
 
-extern int initialized;
-
-
-int wrap_pthread_create(pthread_t *restrict thread, const pthread_attr_t *restrict attr, void *(*start_routine)(void *), void *restrict arg) {
-  if (initialized)
-    printf("pthread_create called \n");
-  return pthread_create(thread, attr, start_routine, arg);
-}
-
-
-int wrap_pthread_join(pthread_t thread, void **retval) {
-  if (initialized)
-    printf("pthread_join called \n");
-  return pthread_join(thread, retval);
-}
-
-void *wrap_malloc(size_t size) {
-  if (initialized)
-    printf("malloc size %zu called \n", size);
-  void *ret = malloc(size);
-  return ret;
-}
-
-void wrap_free(void *ptr) {
-  if (initialized)
-    printf("free on %p called \n", ptr);
-  free(ptr);
-}
-
-
-__attribute__((used, section("__DATA, __interpose")))
-static void *const interpose[] = {(void *)wrap_pthread_create, (void *)pthread_create, (void *)wrap_pthread_join, (void *)pthread_join, (void *)malloc, (void *)wrap_malloc, (void *)free, (void *)wrap_free };
-
 i64 findThreadByTlsIdx(u64 idx) {
     u64 i;
     for (i = 0; i <= n_threads; i++) {
@@ -97,8 +64,11 @@ void mem_analyse_exit() {
     u64 j;
     for (j = 0; j < n_threads; j++) {
         u64 i;
+        printf("Thread id: %ld \n", j);
         printf("mem_write_set_len: %ld \n", threads[j].mem_write_set_len);
         printf("mem_read_set_len: %ld \n", threads[j].mem_read_set_len);
+        printf("unlocks: %ld \n", threads[j].lock_unlock_set_len);
+        printf("locks: %ld \n", threads[j].lock_lock_set_len);
         // for (i = 0; i < threads[j].mem_write_set_len; i++) {
         //     printf("[%d]tid write access to address: %ld, size: %ld, opcode: %s \n", threads[j].mem_write_set[i].thread_id, threads[j].mem_write_set[i].address_accessed, threads[j].mem_write_set[i].size, (threads[j].mem_read_set[i].opcode > REF_TYPE_WRITE) ? decode_opcode_name(threads[j].mem_read_set[i].opcode) /* opcode for instr */ : (threads[j].mem_read_set[i].opcode == REF_TYPE_WRITE ? "w" : "r"));        
         // }
@@ -118,7 +88,7 @@ u32 mem_analyse_init() {
 }
 
 u32 mem_analyse_new_thread_init() {
-    printf("new thread inited \n");
+    // printf("new thread inited \n");
     if (n_threads >= MAX_THREADS) return 0;
     threads[n_threads].idx = tls_idx;
 
@@ -153,13 +123,39 @@ u32 mem_analyse_new_thread_init() {
 }
 
 void mem_analyse_thread_exit() {
-    printf("thread exit \n");
+    // printf("thread exit \n");
 }
 
 void *increase_set_capacity(void *set, u64 *set_capacity) {
     *set_capacity += linear_set_size_increment;
     printf("new set_capacity: %ld \n", *set_capacity);
     return realloc(set, *set_capacity);
+}
+
+void wrap_pre_unlock(void *wrapcxt, OUT void **user_data) {
+    // printf("pthread_unlock called\n");
+    i64 t_index = findThreadByTlsIdx(tls_idx);
+    if (t_index < 0) {
+        printf("error finding tls_idx. %ld \n", t_index);
+        return;    
+    }
+    ThreadState *curr_thread = &threads[t_index];
+    curr_thread->lock_unlock_set[curr_thread->lock_unlock_set_len].lock_address = 0x0;
+    curr_thread->lock_unlock_set[curr_thread->lock_unlock_set_len].thread_id = 0x0;
+    curr_thread->lock_unlock_set_len += 1;
+}
+
+void wrap_pre_lock(void *wrapcxt, OUT void **user_data) {
+    // printf("pthread_lock called\n");
+    i64 t_index = findThreadByTlsIdx(tls_idx);
+    if (t_index < 0) {
+        printf("error finding tls_idx. %ld \n", t_index);
+        return;    
+    }
+    ThreadState *curr_thread = &threads[t_index];
+    curr_thread->lock_lock_set[curr_thread->lock_lock_set_len].lock_address = 0x0;
+    curr_thread->lock_lock_set[curr_thread->lock_lock_set_len].thread_id = 0x0;
+    curr_thread->lock_lock_set_len += 1;
 }
 
 // this is an event like fn that is envoked on every memory access (called by DynamRIO)

@@ -7,6 +7,9 @@
 #include "drreg.h"
 #include "drutil.h"
 #include "drx.h"
+#include "drwrap.h"
+#include "drcallstack.h"
+#include "drsyms.h"
 
 #include "include/memtrace.h"
 
@@ -17,6 +20,78 @@ static uint64 num_refs;    /* keep a global memory reference count */
 static reg_id_t tls_seg;
 
 #define MINSERT instrlist_meta_preinsert
+
+static void
+print_qualified_function_name(app_pc pc)
+{
+    module_data_t *mod = dr_lookup_module(pc);
+    if (mod == NULL) {
+        // If we end up in assembly code or generated code we'll likely never
+        // get out again without stack scanning or frame pointer walking or
+        // other strategies not yet part of drcallstack.
+        printf("  <unknown module> @%p\n", pc);
+        return;
+    }
+    drsym_info_t sym_info;
+#define MAX_FUNC_LEN 1024
+    char name[MAX_FUNC_LEN];
+    char file[MAXIMUM_PATH];
+    sym_info.struct_size = sizeof(sym_info);
+    sym_info.name = name;
+    sym_info.name_size = MAX_FUNC_LEN;
+    sym_info.file = file;
+    sym_info.file_size = MAXIMUM_PATH;
+    const char *func = "<unknown>";
+    drsym_error_t sym_res =
+        drsym_lookup_address(mod->full_path, pc - mod->start, &sym_info, DRSYM_DEMANGLE);
+    if (sym_res == DRSYM_SUCCESS)
+        func = sym_info.name;
+    dr_fprintf(STDERR, "  %s!%s\n", dr_module_preferred_name(mod), func);
+    dr_free_module_data(mod);
+}
+
+static void
+module_load_event(void *drcontext, const module_data_t *mod, bool loaded)
+{
+    size_t modoffs_lock;
+    drsym_error_t sym_res_lock = drsym_lookup_symbol(mod->full_path, "pthread_mutex_lock", &modoffs_lock, DRSYM_DEMANGLE);
+    if (sym_res_lock == DRSYM_SUCCESS) {
+        app_pc towrap = mod->start + modoffs_lock;
+        bool ok = drwrap_wrap(towrap, wrap_pre_lock, NULL);
+        DR_ASSERT(ok);
+    }
+
+    size_t modoffs_unlock;
+    drsym_error_t sym_res_unlock = drsym_lookup_symbol(mod->full_path, "pthread_mutex_unlock", &modoffs_unlock, DRSYM_DEMANGLE);
+    if (sym_res_unlock == DRSYM_SUCCESS) {
+        app_pc towrap = mod->start + modoffs_unlock;
+        bool ok = drwrap_wrap(towrap, wrap_pre_unlock, NULL);
+        DR_ASSERT(ok);
+    }
+}
+
+static void
+module_unload_event(void *drcontext, const module_data_t *mod)
+{
+    // size_t modoffs;
+    // drsym_error_t sym_res = drsym_lookup_symbol(
+    //     mod->full_path, "malloc", &modoffs, DRSYM_DEMANGLE);
+    // if (sym_res == DRSYM_SUCCESS) {
+    //     app_pc towrap = mod->start + modoffs;
+    //     bool ok = drwrap_unwrap(towrap, wrap_pre, NULL);
+    //     DR_ASSERT(ok);
+    // }
+
+    // size_t modoffs;
+    // drsym_error_t sym_res = drsym_lookup_symbol(
+    //     mod->full_path, "malloc", &modoffs, DRSYM_DEMANGLE);
+    // if (sym_res == DRSYM_SUCCESS) {
+    //     app_pc towrap = mod->start + modoffs;
+    //     bool ok = drwrap_unwrap(towrap, wrap_pre, NULL);
+    //     DR_ASSERT(ok);
+    // }
+}
+
 
 /* clean_call dumps the memory reference info to the log file */
 static void clean_call(void) {
@@ -293,15 +368,22 @@ static void event_exit(void) {
     drutil_exit();
     drmgr_exit();
     drx_exit();
+    drmgr_register_module_unload_event(module_unload_event);
+    drcallstack_exit();
+    drwrap_exit();
+    drsym_exit();
 }
 
 DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
     /* We need 2 reg slots beyond drreg's eflags slots => 3 slots */
-    drreg_options_t ops = { sizeof(ops), 3, false };
+    drreg_options_t drreg_ops = { sizeof(drreg_ops), 3, false };
+    drcallstack_options_t callstack_ops = {
+        sizeof(callstack_ops),
+    };
     
     if (!mem_analyse_init()) DR_ASSERT(false);
 
-    if (!drmgr_init() || drreg_init(&ops) != DRREG_SUCCESS || !drutil_init() ||
+    if (!drmgr_init() || drreg_init(&drreg_ops) != DRREG_SUCCESS || !drutil_init() ||
         !drx_init())
         DR_ASSERT(false);
 
@@ -311,8 +393,11 @@ DR_EXPORT void dr_client_main(client_id_t id, int argc, const char *argv[]) {
         !drmgr_register_thread_exit_event(event_thread_exit) ||
         // !drmgr_register_pre_syscall_event(event_pre_syscall) ||
         !drmgr_register_bb_app2app_event(event_bb_app2app, NULL) ||
-        !drmgr_register_bb_instrumentation_event(NULL /*analysis_func*/,
-                                                 event_app_instruction, NULL))
+        !drmgr_register_bb_instrumentation_event(NULL /*analysis_func*/, event_app_instruction, NULL) ||
+        !drwrap_init() || 
+        drcallstack_init(&callstack_ops) != DRCALLSTACK_SUCCESS ||
+        drsym_init(0) != DRSYM_SUCCESS ||
+        !drmgr_register_module_load_event(module_load_event))
         DR_ASSERT(false);
 
     client_id = id;

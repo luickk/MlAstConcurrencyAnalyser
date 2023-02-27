@@ -1,6 +1,6 @@
-# Concurrency analasys based on run/compile time data Ml training
+# Concurrency analasys based on Ml training with run/compile time data 
 
-The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of AST code(with runntime data) without being trained on a dataset.
+The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of AST code(with run- and compiletime data) without being trained on a dataset.
 
 Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping a certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
 

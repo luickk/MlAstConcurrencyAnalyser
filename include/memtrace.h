@@ -54,3 +54,5 @@ extern u32 mem_analyse_init();
 extern void mem_analyse_exit();
 extern void mem_analyse_thread_exit();
 extern u32 mem_analyse_new_thread_init();
+extern void wrap_pre_unlock(void *wrapcxt, OUT void **user_data);
+extern void wrap_pre_lock(void *wrapcxt, OUT void **user_data);
