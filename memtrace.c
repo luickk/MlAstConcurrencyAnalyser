@@ -53,19 +53,20 @@ print_qualified_function_name(app_pc pc)
 static void
 module_load_event(void *drcontext, const module_data_t *mod, bool loaded)
 {
+    // printf("tls_idx: %ld \n", tls_idx);
     size_t modoffs_lock;
     drsym_error_t sym_res_lock = drsym_lookup_symbol(mod->full_path, "pthread_mutex_lock", &modoffs_lock, DRSYM_DEMANGLE);
     if (sym_res_lock == DRSYM_SUCCESS) {
-        app_pc towrap = mod->start + modoffs_lock;
-        bool ok = drwrap_wrap(towrap, wrap_pre_lock, NULL);
+        app_pc towrap_lock = mod->start + modoffs_lock;
+        bool ok = drwrap_wrap(towrap_lock, wrap_pre_lock, NULL);
         DR_ASSERT(ok);
     }
 
     size_t modoffs_unlock;
     drsym_error_t sym_res_unlock = drsym_lookup_symbol(mod->full_path, "pthread_mutex_unlock", &modoffs_unlock, DRSYM_DEMANGLE);
     if (sym_res_unlock == DRSYM_SUCCESS) {
-        app_pc towrap = mod->start + modoffs_unlock;
-        bool ok = drwrap_wrap(towrap, wrap_pre_unlock, NULL);
+        app_pc towrap_unlock = mod->start + modoffs_unlock;
+        bool ok = drwrap_wrap(towrap_unlock, wrap_pre_unlock, NULL);
         DR_ASSERT(ok);
     }
 }
