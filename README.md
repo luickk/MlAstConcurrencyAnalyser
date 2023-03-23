@@ -1,17 +1,16 @@
 # Concurrency analasys based on Ml training with run/compile time data 
 
-The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of AST code(with run- and compiletime data) without being trained on a dataset.
+The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of SICCL(see below) code without being trained on a dataset.
 
 Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping a certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
 
 # Todo
 
 - [x] Approximating feasibility of the project
-	- Simulating different concurrency patterns (as model input) seems to be possible
-	- Building an abstract graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
-	- Finding a fitting Ml model that can handle an unsupervised learning approach is also not an issue
+	- Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
+	- Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
 - [ ] Generating graph from runtime interception/ memory instrumentation and AST data
-- [ ] Writing a simulation environment that generates a concurrent program from an AST like abstraction
+- [ ] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
 - [ ] Putting it all together....
 
 
@@ -23,8 +22,46 @@ Since it's difficult to generate a dataset, an unsupervised learning approach is
 
 ## Code Generation
 
-As for now the plan is to create a parametrized abstraction of each program that consists of compile time AST(READS, WRITES, LOCKS, etc. on certain global or thread shared vars) analysis and runtime SIGNAL data (similar to the helgrind or llvm tsan, more [here](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf). That abstraction, together with the AST data(at least partially) is then fed to the ML model. 
-Currently, the preferred Ml model is a [GAN](https://de.wikipedia.org/wiki/Generative_Adversarial_Networks) like one which has a generator that would generate the abstract compile time AST from which a program equivalent would then be statically generated to be fed back to the discriminator.
+The GAN generates SICCL (see below) which is then turned into python code, run and tested on potential concurrency issues. Wether there was an issue and all kinds of runtime information is then passed to the GAN to optimise on.
+
+### Simple Initial Concurrency Configuration Language (SICCL)
+
+SICCL is a very rudamentary formal language describing intitial concurrent configurations of a program. 
+The only entities are threads and variales. Every new dimension resembles a new thread. 
+In the future the language could include gramar/ syntax for locking, syncing, timing delays to provide a reduced but complex environment for the model to experiment with.
+
+For example:
+```
+{
+	// main thread
+	var1,
+	var2,
+	var3,
+	{
+		// thread 1 called by main
+		var1
+	},
+	{
+		// thread 2 called by main
+		var1,
+		var2,
+		{
+			// thread 3 called by thread2
+			var2,
+			{
+				// thread 4 called by thread3
+				var3,
+				var1,
+			}
+		}
+	},
+	var4,
+	{
+		var4, 
+		var2
+	}
+}
+```
 
 ## Fundamentals
 
@@ -53,22 +90,4 @@ Since it took some time to find the right literature, here a few links:
 - https://github.com/MattPD/cpplinks/blob/master/analysis.dynamic.md#software-sanitizers
 - https://valgrind.org/docs/valgrind2007.pdf
 - https://github.com/QBDI/QBDI
-
-
-# Setup
-
-## Installing LibClang bindings
-- `pip3 install clang`
-- Locate the libclang shared lib. On Mac: `mdfind -name libclang.dylib`
-- Adjust `clang.cindex` (the python module) `set_library_path(path)` in the source code.
-
-More info can be found [here](https://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang)
-
-
-## Getting to run DynamoRIO
-- Download the latest release from their Docs page
-- There isn't too many requirements apart from making the project findable for CMake.
-- Similar to Valgrind they have tools or clients that can be written with their C API.
-- If the client (or tool) is built, it can be run with `DynamoRIO/bin64/drrun -c build/myClient.so -- anyExecutable`
-- Technically it runs on MacOs, but there is no release built available, so I'm running it in an emulated Aarch64 Ubuntu.
 
