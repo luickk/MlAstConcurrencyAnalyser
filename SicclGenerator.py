@@ -1,10 +1,10 @@
 import string
 from random import randint
+import utils
 
 class CodeGeneratorBackend:
-
     def begin(self, tab="\t"):
-        self.code = []
+        self.code: list[string] = []
         self.tab = tab
         self.level = 0
 
@@ -25,8 +25,9 @@ class CodeGeneratorBackend:
 class SicclGenerator():
     def __init__(self):
         self.backend: CodeGeneratorBackend = CodeGeneratorBackend()
-        self.to_generate_threads: list
-        self.to_generate_index: int
+        self.to_generate_threads: list[str] = []
+        self.to_generate_threads_i: list[str] = []
+        self.known_vars: list[str] = []
 
     def create_main(self):
         self.backend.begin(tab="    ")
@@ -42,43 +43,61 @@ class SicclGenerator():
         self.backend.write('if __name__ == "__main__":\n')
         self.backend.indent()
         self.backend.write('main()\n')
-    def create_thread(self, name):
+    def create_thread(self, name: string, params: list[str]):
         self.backend.dedent()
         self.backend.write('\n')
-        self.backend.write('def {0}():\n'.format(name))
+        self.backend.write('def {0}({1}):\n'.format(name, ", ".join(params)))
         self.backend.indent()
 
-    def generate(self, root_call: bool, siccl_array: list):
+    def traverse_tree(self, root_call: bool, siccl_array: list, next_thread: (string, list)) -> None:
+        future_threads_lookup: bool = False        
+        future_threads: list[(string, list)] = []
+        future_threads_i: int = 0
         for i, elem in enumerate(siccl_array):
             if isinstance(elem, list):
-                self.generate(False, elem)
+                print("traversing on instance")
+                if not future_threads_lookup:
+                    future_threads_lookup = True
+                    for elem_elem in siccl_array[i:]:
+                        if isinstance(elem_elem, list):
+                            new_thread_name = "thread_{0}".format(randint(0, 100))
+                            # first flattening and then removing duplicates
+                            print(elem)
+                            new_thread_params: list[str] = utils.remove_dup(utils.flatten(elem_elem))
+                            print(new_thread_params)
+                            self.backend.write('t_{0} = Thread(target={0}, args=({1},)) \n'.format(new_thread_name, ", ".join(new_thread_params)))
+                            self.backend.write('t_{0}.start()\n'.format(new_thread_name))
+                            future_threads.append((new_thread_name, new_thread_params))
+
+                self.traverse_tree(False, elem, future_threads[future_threads_i])
+                future_threads_i += 1
             else: 
+                print("traversing on var")
                 if i == 0:
                     if root_call: 
                         self.create_main();
                     else: 
-                        print(self.to_generate_index, len(self.to_generate_threads))
-                        self.create_thread(self.to_generate_threads[self.to_generate_index]);
-                        self.to_generate_index += 1
-                self.backend.write('{0} = {1}\n'.format(elem, randint(0, 100)))
-                # print(i, elem)
-                # check if this is the last variable
-                if i < len(siccl_array)-1 and isinstance(siccl_array[i+1], list):
-                    threads = len(siccl_array)- (i + 1)
-                    self.to_generate_threads = []
-                    self.to_generate_index = 0
-                    for i in range(threads):
-                        new_thread_name = "thread_{0}".format(randint(0, 100))
-                        self.backend.write('t_{0} = Thread(target={0}, args=()) \n'.format(new_thread_name))
-                        self.backend.write('t_{0}.start()\n'.format(new_thread_name))
-                        self.to_generate_threads.append(new_thread_name)
+                        self.create_thread(next_thread[0], next_thread[1]);
+                if elem not in self.known_vars:
+                    self.backend.write('{0} = [{1}, {2}]\n'.format(elem, randint(0, 100), randint(0, 100)))
+                    self.known_vars.append(elem)
+                else:
+                    self.backend.write('{0}[0] = {1}\n'.format(elem, randint(0, 100)))
+        print("done!")
+
+    def generate(self, siccl_array: list) -> string:
+        self.traverse_tree(True, siccl_array, ("", []))
+        self.call_main();
+        return self.backend.end()
 
 if __name__ == "__main__":
-    siccl_example = ["var1", "var2", "var3", ["var1"], ["var1","var2"]]
-    p = SicclGenerator()
-    p.generate(True, siccl_example)
-    p.call_main();
+    siccl_example = ["var1", "var2", "var3", ["var1"], ["var1","var2", ["var2", ["var3","var1"]]], ["var3","var2"]]
+    gen = SicclGenerator()
+    text = gen.generate(siccl_example)
+    
     f = open("final.py",'w')
-    f.write(p.backend.end())
+    f.write(text)
     f.close()
-    # print(siccl_example)
+
+    print(text)
+    

@@ -28,7 +28,7 @@ The GAN generates SICCL (see below) which is then turned into python code, run a
 
 SICCL is a very rudamentary formal language describing intitial concurrent configurations of a program. 
 The only entities are threads and variales. Every new dimension resembles a new thread. 
-In the future the language could include gramar/ syntax for locking, syncing, timing delays to provide a reduced but complex environment for the model to experiment with.
+In the future the language could include gramar/ syntax for locking, syncing, timing delays to provide a reduced but complex enough environment for the model to experiment with.
 
 For example:
 ```
