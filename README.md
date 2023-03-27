@@ -34,34 +34,41 @@ For example:
 ```
 {
 	// main thread
-	var1,
-	var2,
-	var3,
+	"var1_m1",
+	"var2",
+	"var3",
 	{
 		// thread 1 called by main
-		var1
+		"var1_m1"
 	},
 	{
 		// thread 2 called by main
-		var1,
-		var2,
+		"var1_m1",
+		"var2",
 		{
 			// thread 3 called by thread2
-			var2,
+			"var2",
 			{
 				// thread 4 called by thread3
-				var3,
-				var1,
+				"var3",
+				"var1_m1",
 			}
 		}
 	},
-	var4,
+	"var4",
 	{
-		var4, 
-		var2
+		"var4", 
+		"var2"
 	}
 }
 ```
+Syntax:
+- Variables are string formatted like that: `<variable name>_<mutex name>`
+- Threads: `{ <vars...> }` every new dimension is a thread
+
+Prerequisite: 
+- Mutexe must be initialy used(inited) in the same or a greater dimension than it's used in or it will not be declared as global and not be found!
+- All variables used by a thread must be listed *before* the next thread!
 
 ## Fundamentals
 

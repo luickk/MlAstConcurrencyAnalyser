@@ -1,5 +1,15 @@
 from collections.abc import Iterable
 
+def parse_var(var_name: str) -> tuple[str, any]:
+    mutex_name = None
+    split_res = var_name.split("_")
+    if len(split_res) >= 2:
+        if split_res[1][0] == "m":
+            mutex_name = split_res[1]
+        else:
+            raise("SICCL syntax error: Mutex has to start with an m")
+    return (split_res[0], mutex_name)
+
 # https://stackoverflow.com/questions/17864466/flatten-a-list-of-strings-and-lists-of-strings-and-lists-in-python
 def flatten(input: list[str]) -> list[str]:
     res: list[str] = []
