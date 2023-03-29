@@ -9,8 +9,7 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
 - [x] Approximating feasibility of the project
 	- Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
 	- Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
-- [ ] Generating graph from runtime interception/ memory instrumentation and AST data
-- [ ] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
+- [x] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
 - [ ] Putting it all together....
 
 
@@ -18,7 +17,11 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
 
 ## ML model
 
-Since it's difficult to generate a dataset, an unsupervised learning approach is the most obvious to choose. The great problem is the generation of sample programs that are executable and *have a high enough entropy*. I'm relatively sure that if the code generation is not integrated in the model, as for example in a [GAN](https://de.wikipedia.org/wiki/Generative_Adversarial_Networks), the entropy and as such the possibility for concurrency/ sync bugs would be far too low. Also, it would be vastly inefficient, opposing to an optimized generator/ discriminator model.
+Since it's difficult to generate a dataset, a reinforcement learning approach is the most obvious to choose. The great problem is the generation of sample programs that are executable and *have a high enough entropy*.
+
+Since generating python code is simply too complex for a simple reinforcement learning model I created SICCL(Simple Initial Concurrency Configuration Language -> see below), which acts as an abstraction layer to the reinforcement learning model. Since finding a proper policy function for a "language" is difficult, I will be using a [model free approach](https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)).
+
+The basic values the model will optimise for are size (len of the SICCL script) and validity. Crashes or bad static scans (for example through valgrind) will result in bad scores...
 
 ## Code Generation
 
@@ -67,7 +70,6 @@ Syntax:
 - Threads: `{ <vars...> }` every new dimension is a thread
 
 Prerequisite: 
-- Mutexe must be initialy used(inited) in the same or a greater dimension than it's used in or it will not be declared as global and not be found!
 - All variables used by a thread must be listed *before* the next thread!
 
 ## Fundamentals
@@ -76,7 +78,7 @@ It's difficult to find information on how modern thread sanitizers work and exis
 
 ## Tools for Instrumentation/ Interception, AST analysis
 
-Since the approach of this project to generate a proper dataset for the Ml model is a mix of run and compiletime data, both AST code and runtime information need to be combined into one graph.
+Since the approach of this project to generate a proper learning environment for the Ml model is a mix of run and compiletime data, both AST code and runtime information need to be combined into one graph.
 For AST parsing and analysis, LLVM offers libclang which is really handy and covers all requirements. 
 
 In order to generate a somewhat complete graph, we need the memory access information, which can only be read through memory instrumentation.

@@ -74,7 +74,7 @@ class SicclGenerator():
                             new_thread_params: list[str] = utils.flatten(new_threads)
                             for i, name in enumerate(new_thread_params): new_thread_params[i] = utils.parse_var(name)[0]
                             new_thread_params = utils.remove_dup(new_thread_params)
-                            
+
                             self.backend.write('t_{0} = Thread(target={0}, args=({1},)) \n'.format(new_thread_name, ", ".join(new_thread_params)))
                             self.backend.write('t_{0}.start()\n'.format(new_thread_name))
                             future_threads.append((new_thread_name, new_thread_params))
@@ -106,15 +106,3 @@ class SicclGenerator():
         self.traverse_tree(True, siccl_array, ("", []))
         self.call_main();
         return self.backend.end()
-
-if __name__ == "__main__":
-    siccl_example = ["var1_m1", "var2", "var3", ["var1_m1"], ["var1_m1","var2", ["var2", ["var3","var1"]]], ["var3","var2"]]
-    gen = SicclGenerator()
-    text = gen.generate(siccl_example)
-    
-    f = open("final.py",'w')
-    f.write(text)
-    f.close()
-
-    print(text)
-    

@@ -7,7 +7,7 @@ def parse_var(var_name: str) -> tuple[str, any]:
         if split_res[1][0] == "m":
             mutex_name = split_res[1]
         else:
-            raise("SICCL syntax error: Mutex has to start with an m")
+            raise("SICCL syntax error: Mutex name has to start with an m")
     return (split_res[0], mutex_name)
 
 # https://stackoverflow.com/questions/17864466/flatten-a-list-of-strings-and-lists-of-strings-and-lists-in-python
