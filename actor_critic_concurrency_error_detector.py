@@ -1,15 +1,18 @@
 import gym
+import utils
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from concurrency_detector_env import ConcurrencyDetectorEnvironment
 
 # Configuration parameters for the whole setup
 seed = 42
 gamma = 0.99  # Discount factor for past rewards
 max_steps_per_episode = 10000
-env = gym.make("CartPole-v0")  # Create the environment
-env.seed(seed)
+# env = gym.make("CartPole-v0")  # Create the environment
+# env.seed(seed)
+env = ConcurrencyDetectorEnvironment()
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 """

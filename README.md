@@ -72,6 +72,10 @@ Syntax:
 Prerequisite: 
 - All variables used by a thread must be listed *before* the next thread!
 
+New, flattened, Version:
+Because tensorflow and friends heavily rely on numpy (and numpy really has all the handy math implementations), SICCL arrays need to be convertable to such. 
+Sadly there is no simple way to convert "asymetric" python lists to numpy arrays (when trying to padd to the biggest dimension on the axis, strings mess up existing implementations it gets ugly fast). Although it's more intuitive for the eye and spares additional thread information the new SICCL version will change to a 1 Axis numpy array which contains tuples with all the information about the variable, thread name...
+
 ## Fundamentals
 
 It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden in or built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundemntals though.
