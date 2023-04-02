@@ -4,6 +4,6 @@ if __name__ == "__main__":
 	env = ConcurrencyDetectorEnvironment()
 	print(env.input_shape)
 	env.step((1, 2, 12))
-	
-	print(env.siccl_list)
+
+	#print(env.siccl_arr)
 	print(env.res_text)
