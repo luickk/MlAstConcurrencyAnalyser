@@ -14,5 +14,7 @@ if __name__ == "__main__":
 	# print(env.input_shape)
 	env.step((5, 2, 12))
 
+	print(env.input_shape)
+	print(env.action_shape)
 	print(env.siccl_arr)
 	print(env.res_text)

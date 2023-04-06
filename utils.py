@@ -12,7 +12,7 @@ def parse_var(var_name: str) -> tuple[str, any]:
 def flatten(input: list[str]) -> list[str]:
     res: list[str] = []
     for i in input:
-        if isinstance(i, Iterable) and not isinstance(i, str):
+        if isinstance(i, Iterable) and not isinstance(i, str) and not isinstance(i, int):
             for subc in flatten(i):
                 res.append(subc)
         else:

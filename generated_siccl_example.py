@@ -4,35 +4,35 @@ import threading
 from threading import Thread
 
 def main():
-    var1 = [23, 7]
-    var2 = [100, 77]
-    global m1
-    m1 = threading.Lock()
-    t_thread1 = Thread(target=thread1, args=(var1, var2,)) 
-    t_thread1.start()
+    var_2 = [85, 3]
+    var_3 = [39, 78]
+    global mutex_4
+    mutex_4 = threading.Lock()
+    t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
+    t_5.start()
 
-def thread1(var1, var2):
-    m1.acquire()
-    var1[0] = 67
-    m1.release()
-    var2[0] = 22
-    t_thread2 = Thread(target=thread2, args=(var1,)) 
-    t_thread2.start()
-    t_thread3 = Thread(target=thread3, args=(var1,)) 
-    t_thread3.start()
+def thread_5(var_2, var_3):
+    mutex_4.acquire()
+    var_2[0] = 90
+    mutex_4.release()
+    var_3[0] = 78
+    t_6 = Thread(target=thread_6, args=(var_2,)) 
+    t_6.start()
+    t_7 = Thread(target=thread_7, args=(var_2,)) 
+    t_7.start()
 
-def thread2(var1):
-    m1.acquire()
-    var1[0] = 0
-    m1.release()
-    m1.acquire()
-    var1[0] = 82
-    m1.release()
+def thread_6(var_2):
+    mutex_4.acquire()
+    var_2[0] = 69
+    mutex_4.release()
+    mutex_4.acquire()
+    var_2[0] = 45
+    mutex_4.release()
 
-def thread3(var1):
-    m1.acquire()
-    var1[0] = 75
-    m1.release()
+def thread_7(var_2):
+    mutex_4.acquire()
+    var_2[0] = 30
+    mutex_4.release()
 
 if __name__ == "__main__":
     main()

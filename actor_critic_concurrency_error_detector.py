@@ -6,33 +6,26 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from concurrency_detector_env import ConcurrencyDetectorEnvironment
 
-# Configuration parameters for the whole setup
-seed = 42
+n_max_mutex = 100
+num_hidden = 128
+num_actions = 3
+                            #   parent arr, thread name, var name, mutex name
+siccl_example_flattened = np.array([[0, 1, 2, 4],
+                                    [0, 1, 3, 4],
+                                    [1, 5, 2, 4], 
+                                    [1, 5, 3, 0], 
+                                    [5, 6, 2, 4], 
+                                    [5, 6, 2, 4], 
+                                    [5, 7, 2, 4]], dtype=int)
 gamma = 0.99  # Discount factor for past rewards
-max_steps_per_episode = 10000
-# env = gym.make("CartPole-v0")  # Create the environment
-# env.seed(seed)
-env = ConcurrencyDetectorEnvironment()
+max_steps_per_episode = 100
+
+
+
+env = ConcurrencyDetectorEnvironment(siccl_example_flattened)
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
-"""
-## Implement Actor Critic network
-
-This network learns two functions:
-
-1. Actor: This takes as input the state of our environment and returns a
-probability value for each action in its action space.
-2. Critic: This takes as input the state of our environment and returns
-an estimate of total rewards in the future.
-
-In our implementation, they share the initial layer.
-"""
-
-num_inputs = 4
-num_actions = 2
-num_hidden = 128
-
-inputs = layers.Input(shape=(num_inputs,))
+inputs = layers.Input(shape=(28,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
 action = layers.Dense(num_actions, activation="softmax")(common)
 critic = layers.Dense(1)(common)
@@ -52,27 +45,32 @@ running_reward = 0
 episode_count = 0
 
 while True:  # Run until solved
-    state = env.reset()
+    state = env.reset().flatten()
     episode_reward = 0
     with tf.GradientTape() as tape:
         for timestep in range(1, max_steps_per_episode):
-            # env.render(); Adding this line would show the attempts
-            # of the agent in a pop up window.
-
             state = tf.convert_to_tensor(state)
             state = tf.expand_dims(state, 0)
 
             # Predict action probabilities and estimated future rewards
             # from environment state
+
             action_probs, critic_value = model(state)
             critic_value_history.append(critic_value[0, 0])
 
             # Sample action from action probability distribution
-            action = np.random.choice(num_actions, p=np.squeeze(action_probs))
-            action_probs_history.append(tf.math.log(action_probs[0, action]))
+            
+            # action = np.random.choice(a=num_action, p=np.squeeze(action_probs))
+            action = np.random.binomial((env.n_action, len(state), n_max_mutex), action_probs)
+
+            # print("action:", action)
+            #action_probs_history.append(tf.math.log(action_probs[0, action]))
+            action_probs_history.append(np.squeeze(action_probs))
 
             # Apply the sampled action in our environment
-            state, reward, done, _ = env.step(action)
+            
+            state, reward, done = env.step(np.squeeze(action))
+            state = state.flatten()
             rewards_history.append(reward)
             episode_reward += reward
 
@@ -98,10 +96,13 @@ while True:  # Run until solved
         returns = returns.tolist()
 
         # Calculating loss values to update our network
+        print(action_probs_history, critic_value_history, returns)
         history = zip(action_probs_history, critic_value_history, returns)
+
         actor_losses = []
         critic_losses = []
         for log_prob, value, ret in history:
+            print(log_prob, value, ret)
             # At this point in history, the critic estimated that we would get a
             # total reward = `value` in the future. We took an action with log probability
             # of `log_prob` and ended up recieving a total reward = `ret`.
@@ -135,11 +136,3 @@ while True:  # Run until solved
     if running_reward > 195:  # Condition to consider the task solved
         print("Solved at episode {}!".format(episode_count))
         break
-"""
-## Visualizations
-In early stages of training:
-![Imgur](https://i.imgur.com/5gCs5kH.gif)
-
-In later stages of training:
-![Imgur](https://i.imgur.com/5ziiZUD.gif)
-"""
