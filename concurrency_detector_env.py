@@ -27,9 +27,9 @@ class ConcurrencyDetectorEnvironment:
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
 
-	# action tuple: action, (multi dim)index, mutex id
-	def step(self, action: (int, list, int)):
-		index = action[1]
+	# action tuple: action, index, mutex id
+	def step(self, action: (int, int, int)):
+		index = np.unravel_index(action[1], self.siccl_arr.shape)[0]
 		mutex_name = self.siccl_arr[index][3]
 		var_name = self.siccl_arr[index][2]
 		thread_name = self.siccl_arr[index][1]
@@ -45,16 +45,16 @@ class ConcurrencyDetectorEnvironment:
 
 		reward = 0
 		with stdoutIO() as s:
-		    try:
-		        exec(code)
-		    except:
-		        # print("Something wrong with the code")
-		        reward -= 10
-		reward += 10
-		# print("code successfully executed:", s.getvalue())
-
+			try:
+			    exec(self.res_text)
+			except:
+			    # state, reward, done
+				return self.siccl_arr, -10, False
+		reward = 1
 		# state, reward, done
 		return self.siccl_arr, reward, False
+
+		
 
 	def reset(self):
 		self.siccl_arr = self.reset_env

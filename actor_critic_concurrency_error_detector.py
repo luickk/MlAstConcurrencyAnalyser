@@ -8,7 +8,8 @@ from concurrency_detector_env import ConcurrencyDetectorEnvironment
 
 n_max_mutex = 100
 num_hidden = 128
-num_actions = 3
+
+num_actions = 2
                             #   parent arr, thread name, var name, mutex name
 siccl_example_flattened = np.array([[0, 1, 2, 4],
                                     [0, 1, 3, 4],
@@ -17,6 +18,8 @@ siccl_example_flattened = np.array([[0, 1, 2, 4],
                                     [5, 6, 2, 4], 
                                     [5, 6, 2, 4], 
                                     [5, 7, 2, 4]], dtype=int)
+n_indices = len(siccl_example_flattened)
+n_mutexe = 10
 gamma = 0.99  # Discount factor for past rewards
 max_steps_per_episode = 100
 
@@ -27,10 +30,14 @@ eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 
 
 inputs = layers.Input(shape=(28,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
+
 action = layers.Dense(num_actions, activation="softmax")(common)
+action_indices = layers.Dense(n_indices, activation="softmax")(common)
+action_mutex_id = layers.Dense(n_mutexe, activation="softmax")(common)
+
 critic = layers.Dense(1)(common)
 
-model = keras.Model(inputs=inputs, outputs=[action, critic])
+model = keras.Model(inputs=inputs, outputs=[action, action_indices, action_mutex_id, critic])
 
 """
 ## Train
@@ -55,21 +62,19 @@ while True:  # Run until solved
             # Predict action probabilities and estimated future rewards
             # from environment state
 
-            action_probs, critic_value = model(state)
+            action_probs, indices_probs, mutexe_probs, critic_value = model(state)
             critic_value_history.append(critic_value[0, 0])
 
             # Sample action from action probability distribution
-            
-            # action = np.random.choice(a=num_action, p=np.squeeze(action_probs))
-            action = np.random.binomial((env.n_action, len(state), n_max_mutex), action_probs)
 
-            # print("action:", action)
-            #action_probs_history.append(tf.math.log(action_probs[0, action]))
-            action_probs_history.append(np.squeeze(action_probs))
+            action = np.random.choice(a=num_actions, p=np.squeeze(action_probs))
+            index = np.random.choice(a=n_indices, p=np.squeeze(indices_probs))
+            mutex_id = np.random.choice(a=n_mutexe, p=np.squeeze(mutexe_probs))
+
+            action_probs_history.append(tf.math.log(action_probs[0, action]))
 
             # Apply the sampled action in our environment
-            
-            state, reward, done = env.step(np.squeeze(action))
+            state, reward, done = env.step((action, index, mutex_id))
             state = state.flatten()
             rewards_history.append(reward)
             episode_reward += reward
@@ -96,13 +101,11 @@ while True:  # Run until solved
         returns = returns.tolist()
 
         # Calculating loss values to update our network
-        print(action_probs_history, critic_value_history, returns)
         history = zip(action_probs_history, critic_value_history, returns)
 
         actor_losses = []
         critic_losses = []
         for log_prob, value, ret in history:
-            print(log_prob, value, ret)
             # At this point in history, the critic estimated that we would get a
             # total reward = `value` in the future. We took an action with log probability
             # of `log_prob` and ended up recieving a total reward = `ret`.
