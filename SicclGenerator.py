@@ -6,9 +6,9 @@ import utils
 
 # up front: this has to be rewritten and is one of the most inefficient things I've ever done. 
 class CodeGeneratorBackend:
-    def begin(self, tab="\t"):
+    def __init__(self):
         self.code: list[string] = []
-        self.tab = tab
+        self.tab = "    "
         self.level = 0
 
     def end(self):
@@ -31,16 +31,33 @@ class SicclGenerator():
         self.known_vars: list[str] = []
         self.known_mutexe: list[str] = []
 
+
+    def end_loops_timer_thread(self):
+        self.backend.dedent()
+        self.backend.write('\n')
+        self.backend.write('def end_loops_timer_thread():\n')
+        self.backend.indent()
+        self.backend.write('time.sleep(5)\n')
+        self.backend.write('globals()["exit_loops"] = True\n')
+        self.backend.dedent()
+        self.backend.write('\n')
+
     def create_main(self):
-        self.backend.begin(tab="    ")
         self.backend.write('#!/usr/bin/python3\n')
         self.backend.write('\n')
         self.backend.write('import threading\n')
+        self.backend.write('import time\n')
         self.backend.write('from threading import Thread\n')
         self.backend.write('\n')
+        self.backend.write("exit_loops = False\n")
+        self.end_loops_timer_thread()
         self.backend.write('def main():\n')
         self.backend.indent()
+        self.backend.write('loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) \n')
+        self.backend.write('loop_stop_thread.start()\n')
+
     def call_main(self):
+        self.backend.dedent()
         self.backend.dedent()
         self.backend.write('\n')
         self.backend.write('if __name__ == "__main__":\n')
@@ -49,8 +66,6 @@ class SicclGenerator():
     def create_thread(self, name: string, params: list[str]):
         self.backend.dedent()
         self.backend.write('\n')
-        # print(params)
-
         stringiefied_t_params = params.copy()
         for i, param in enumerate(stringiefied_t_params):
             stringiefied_t_params[i] = "var_" + str(param)
@@ -65,9 +80,9 @@ class SicclGenerator():
             var_name = elem[2]
             thread_name = elem[1]
             parent_thread = elem[0]
-
             # new thread
             if last_thread_name != thread_name:
+                self.backend.dedent()
                 if root_call: 
                     self.create_main();
                     root_call = False
@@ -79,17 +94,6 @@ class SicclGenerator():
                     self.create_thread(thread_name, thread_params);
 
 
-            if var_name not in self.known_vars:
-                self.backend.write('var_{0} = [{1}, {2}]\n'.format(var_name, randint(0, 100), randint(0, 100)))
-                self.known_vars.append(var_name)
-            else:
-                if mutex_name != 0:
-                    self.backend.write("mutex_{0}.acquire()\n".format(mutex_name))
-                self.backend.write('var_{0}[0] = {1}\n'.format(var_name, randint(0, 100)))
-                if mutex_name != 0:
-                    self.backend.write("mutex_{0}.release()\n".format(mutex_name))
-
-            if i >= len(siccl_array)-1 or siccl_array[i+1][1] != thread_name:
                 for deps_per_thread in thread_dgraph:
                     if deps_per_thread[0] == thread_name:
                         for dependant_thread in deps_per_thread[1]:
@@ -106,11 +110,26 @@ class SicclGenerator():
                                 if params_per_thread[0] == dependant_thread:
                                     thread_params = params_per_thread[1]
 
+
                             stringiefied_t_params = thread_params.copy()
                             for i, param in enumerate(stringiefied_t_params):
                                 stringiefied_t_params[i] =  "var_" + str(param)
+                                if param not in self.known_vars:
+                                    self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, randint(0, 100), randint(0, 100)))
+                                    self.known_vars.append(param)
                             self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
                             self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
+
+
+                self.backend.write('while not exit_loops:\n')
+                self.backend.indent()
+            
+            if var_name in self.known_vars:
+                if mutex_name != 0:
+                    self.backend.write("mutex_{0}.acquire()\n".format(mutex_name))
+                self.backend.write('var_{0}[0] = {1}\n'.format(var_name, randint(0, 100)))
+                if mutex_name != 0:
+                    self.backend.write("mutex_{0}.release()\n".format(mutex_name))
             
             last_thread_name = thread_name
     def generate_thread_dependency_graph(self, siccl_array: np.array) -> list[tuple[str, list[str]]]:

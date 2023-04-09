@@ -27,55 +27,76 @@ The basic values the model will optimise for are size (len of the SICCL script) 
 
 The GAN generates SICCL (see below) which is then turned into python code, run and tested on potential concurrency issues. Wether there was an issue and all kinds of runtime information is then passed to the GAN to optimise on.
 
+## Concurrency issue detection
+
+Concurrency issue detection can be a very complex endeavor but since we don't need a high degree of abstraction or readability but really only some indication value we will keep it simple. In python, not all operations on lists are atomic so that they just miss in the end result. That is quite useful if you know what they should be. So the concurrency issue indicator will be a function of how many non atomic operations on a list have not been "executed" (e.g. are missing) compared to how many should have been "executed, the delta is the indicator.
+
 ### Simple Initial Concurrency Configuration Language (SICCL)
 
 SICCL is a very rudamentary formal language describing intitial concurrent configurations of a program. 
 The only entities are threads and variales. Every new dimension resembles a new thread. 
 In the future the language could include gramar/ syntax for locking, syncing, timing delays to provide a reduced but complex enough environment for the model to experiment with.
 
+Originally I wanted to go with a multidimensional tree like structure where every new axis was a new thread. That was a lot more elegant, not just for readability, but also for generation. The problem was that numpy/ tensorflow doesn't really support multi axis arrays with different sizes, and transforming (mostly padding) them is more complex than just going with an already flattened(static in size and axes) structure. The new flattened version has the problem that thread information needs to be encoded as well.
 For example:
+```python
+# thread id, var id, mutex id
+[0, 1, 2, 4],
+[0, 1, 3, 4],
+[1, 5, 2, 4], 
+[1, 5, 3, 0], 
+[5, 6, 2, 4], 
+[5, 6, 2, 4], 
+[5, 7, 2, 4]
 ```
-{
-	// main thread
-	"var1_m1",
-	"var2",
-	"var3",
-	{
-		// thread 1 called by main
-		"var1_m1"
-	},
-	{
-		// thread 2 called by main
-		"var1_m1",
-		"var2",
-		{
-			// thread 3 called by thread2
-			"var2",
-			{
-				// thread 4 called by thread3
-				"var3",
-				"var1_m1",
-			}
-		}
-	},
-	"var4",
-	{
-		"var4", 
-		"var2"
-	}
-}
+compiles to:
+
+```python
+#!/usr/bin/python3
+
+import threading
+import time
+from threading import Thread
+
+exit_loops = False
+
+def end_loops_timer_thread():
+    time.sleep(5)
+    globals()["exit_loops"] = True
+
+def main():
+    loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) 
+    loop_stop_thread.start()
+    var_2 = [92, 87]
+    var_3 = [28, 27]
+    t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
+    t_5.start()
+    while not exit_loops:
+        var_2[0] = 47
+        var_3[0] = 88
+
+def thread_5(var_2, var_3):
+    t_6 = Thread(target=thread_6, args=(var_2,)) 
+    t_6.start()
+    t_7 = Thread(target=thread_7, args=(var_2,)) 
+    t_7.start()
+    while not exit_loops:
+        var_2[0] = 45
+        var_3[0] = 10
+
+def thread_6(var_2):
+    while not exit_loops:
+        var_2[0] = 100
+        var_2[0] = 12
+
+def thread_7(var_2):
+    while not exit_loops:
+        var_2[0] = 87
+
+if __name__ == "__main__":
+    main()
+
 ```
-Syntax:
-- Variables are string formatted like that: `<variable name>_<mutex name>`
-- Threads: `{ <vars...> }` every new dimension is a thread
-
-Prerequisite: 
-- All variables used by a thread must be listed *before* the next thread!
-
-New, flattened, Version:
-Because tensorflow and friends heavily rely on numpy (and numpy really has all the handy math implementations), SICCL arrays need to be convertable to such. 
-Sadly there is no simple way to convert "asymetric" python lists to numpy arrays (when trying to padd to the biggest dimension on the axis, strings mess up existing implementations it gets ugly fast). Although it's more intuitive for the eye and spares additional thread information the new SICCL version will change to a 1 Axis numpy array which contains tuples with all the information about the variable, thread name...
-
 ## Fundamentals
 
 It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden in or built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundemntals though.

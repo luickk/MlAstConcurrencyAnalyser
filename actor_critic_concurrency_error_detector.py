@@ -51,6 +51,8 @@ rewards_history = []
 running_reward = 0
 episode_count = 0
 
+print(model.summary())
+
 while True:  # Run until solved
     state = env.reset().flatten()
     episode_reward = 0
@@ -71,10 +73,13 @@ while True:  # Run until solved
             index = np.random.choice(a=n_indices, p=np.squeeze(indices_probs))
             mutex_id = np.random.choice(a=n_mutexe, p=np.squeeze(mutexe_probs))
 
-            action_probs_history.append(tf.math.log(action_probs[0, action]))
+            # adding average of multi action confidence to history
+            action_probs_history.append(tf.math.log(np.average([action_probs[0, action], indices_probs[0, index], mutexe_probs[0, mutex_id]])))
 
+            print(action, index, mutex_id)
             # Apply the sampled action in our environment
             state, reward, done = env.step((action, index, mutex_id))
+            print(state)
             state = state.flatten()
             rewards_history.append(reward)
             episode_reward += reward
@@ -99,7 +104,6 @@ while True:  # Run until solved
         returns = np.array(returns)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
         returns = returns.tolist()
-
         # Calculating loss values to update our network
         history = zip(action_probs_history, critic_value_history, returns)
 
@@ -116,12 +120,11 @@ while True:  # Run until solved
 
             # The critic must be updated so that it predicts a better estimate of
             # the future rewards.
-            critic_losses.append(
-                huber_loss(tf.expand_dims(value, 0), tf.expand_dims(ret, 0))
-            )
+            critic_losses.append(huber_loss(tf.expand_dims(value, 0), tf.expand_dims(ret, 0)))
 
         # Backpropagation
         loss_value = sum(actor_losses) + sum(critic_losses)
+
         grads = tape.gradient(loss_value, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
