@@ -25,7 +25,7 @@ max_steps_per_episode = 100
 
 
 
-env = ConcurrencyDetectorEnvironment(siccl_example_flattened)
+env = ConcurrencyDetectorEnvironment(siccl_example_flattened, 1)
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
 inputs = layers.Input(shape=(28,))
@@ -76,10 +76,10 @@ while True:  # Run until solved
             # adding average of multi action confidence to history
             action_probs_history.append(tf.math.log(np.average([action_probs[0, action], indices_probs[0, index], mutexe_probs[0, mutex_id]])))
 
-            print(action, index, mutex_id)
+            # print(action, index, mutex_id)
             # Apply the sampled action in our environment
             state, reward, done = env.step((action, index, mutex_id))
-            print(state)
+            # print(state)
             state = state.flatten()
             rewards_history.append(reward)
             episode_reward += reward

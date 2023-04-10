@@ -6,6 +6,7 @@ import pandas as pd
 import sys
 from io import StringIO
 import contextlib
+import subprocess
 
 
 @contextlib.contextmanager
@@ -18,11 +19,11 @@ def stdoutIO(stdout=None):
     sys.stdout = old
 
 class ConcurrencyDetectorEnvironment:
-	def __init__(self, siccl_arr: np.array):
+	def __init__(self, siccl_arr: np.array, siccl_config_test_time: int):
 		self.reset_env = siccl_arr
 		self.siccl_arr = siccl_arr
 		self.n_action = 1
-		self.gen: SicclGenerator= SicclGenerator()
+		self.gen: SicclGenerator= SicclGenerator(siccl_config_test_time)
 		self.res_text: list[str] = []
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
@@ -44,12 +45,15 @@ class ConcurrencyDetectorEnvironment:
 		self.res_text = self.gen.generate(self.siccl_arr)
 
 		reward = 0
-		with stdoutIO() as s:
-			try:
-			    exec(self.res_text)
-			except:
-			    # state, reward, done
-				return self.siccl_arr, -10, False
+
+		try:
+			ok_rc = subprocess.Popen(['python3', '-c', self.res_text], stdout=subprocess.PIPE)
+			print(ok_rc.stdout.read())
+			ok_rc.communicate()
+		except subprocess.CalledProcessError as e:
+			return self.siccl_arr, -10, False
+		
+
 		reward = 1
 		# state, reward, done
 		return self.siccl_arr, reward, False
@@ -64,3 +68,5 @@ class ConcurrencyDetectorEnvironment:
 		f = open("generated_siccl_example.py",'w')
 		f.write(self.res_text)
 		f.close()
+		
+		

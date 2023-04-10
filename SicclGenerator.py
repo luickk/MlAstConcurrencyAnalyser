@@ -26,18 +26,18 @@ class CodeGeneratorBackend:
         self.level = self.level - 1
 
 class SicclGenerator():
-    def __init__(self):
+    def __init__(self, siccl_config_test_time: int):
         self.backend: CodeGeneratorBackend = CodeGeneratorBackend()
         self.known_vars: list[str] = []
         self.known_mutexe: list[str] = []
-
+        self.siccl_config_test_time = siccl_config_test_time
 
     def end_loops_timer_thread(self):
         self.backend.dedent()
         self.backend.write('\n')
         self.backend.write('def end_loops_timer_thread():\n')
         self.backend.indent()
-        self.backend.write('time.sleep(5)\n')
+        self.backend.write('time.sleep({0})\n'.format(self.siccl_config_test_time))
         self.backend.write('globals()["exit_loops"] = True\n')
         self.backend.dedent()
         self.backend.write('\n')
@@ -50,6 +50,7 @@ class SicclGenerator():
         self.backend.write('from threading import Thread\n')
         self.backend.write('\n')
         self.backend.write("exit_loops = False\n")
+        # self.backend.write("per_thread_loop_count[{0}] = {}\n".format())
         self.end_loops_timer_thread()
         self.backend.write('def main():\n')
         self.backend.indent()
@@ -124,6 +125,7 @@ class SicclGenerator():
                 self.backend.write('while not exit_loops:\n')
                 self.backend.indent()
             
+            # self.backend.write('print("benis")\n')
             if var_name in self.known_vars:
                 if mutex_name != 0:
                     self.backend.write("mutex_{0}.acquire()\n".format(mutex_name))
