@@ -1,4 +1,4 @@
-# Concurrency analasys based on Ml training with run/compile time data 
+# Concurrency analysis based on Ml training with run/compile time data 
 
 The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of SICCL(see below) code without being trained on a dataset.
 
@@ -35,7 +35,7 @@ The from the SICCL script generated python script includes the calculation of th
 If there is not enough mutexe, the add operation might not be applied on the variable, which does not get increased as a result. The greater the difference of the value, the variable should have had(the sum of all the loops it's referenced in) and the actual value, the more collisions were happening.
 That does not compensate for potential data races, but that can be added later.
 
-### Detection resuluts
+### Detection results
 
 This very simple indicator works great with a very low error rate compared to its delta of mutex vs no mutex usage.
 

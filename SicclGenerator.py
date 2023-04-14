@@ -68,12 +68,13 @@ class SicclGenerator():
         
 
         # self.backend.write('print(per_thread_loop_count)\n')
-        self.backend.write('print(shared_vars_count)\n')
-        self.backend.write('print(end_loop_shared_vars_res)\n')
+        # self.backend.write('print(shared_vars_count)\n')
+        # self.backend.write('print(end_loop_shared_vars_res)\n')
         self.backend.write('assert(len(shared_vars_count) == len(end_loop_shared_vars_res))\n')
         self.backend.write('for i, var in enumerate(end_loop_shared_vars_res): \n')
         self.backend.indent()
-        self.backend.write('print("var", var[0], "diff: ", shared_vars_count[i][1]-var[1][0])\n')
+        self.backend.write('average = sum(var[1]) / len(var[1])\n')
+        self.backend.write('print("var", var[0], "diff: ", shared_vars_count[i][1]-average)\n')
         self.backend.dedent()
         self.backend.write('\n')
         
