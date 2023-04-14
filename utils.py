@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+import io
 
 def parse_var(var_name: str) -> tuple[str, any]:
     mutex_name = None
@@ -20,8 +21,8 @@ def flatten(input: list[str]) -> list[str]:
     return res
 
 # very slow
-def remove_dup(input: list[str]) -> list[str]:
-    res: list[str] = []
+def remove_dup(input: list[int]) -> list[int]:
+    res: list[int] = []
     for elem in input:
        if elem not in res:
           res.append(elem)
@@ -40,3 +41,11 @@ def index_multi_dim_multi_axis_list(to_scan_list: list, index: list, value_to_se
                 return
             else:
                 return next_dim_list[elem]
+
+
+def print_to_string(*args, **kwargs):
+    output = io.StringIO()
+    print(*args, file=output, **kwargs)
+    contents = output.getvalue()
+    output.close()
+    return contents

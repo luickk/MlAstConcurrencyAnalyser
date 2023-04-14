@@ -31,6 +31,52 @@ The GAN generates SICCL (see below) which is then turned into python code, run a
 
 Concurrency issue detection can be a very complex endeavor but since we don't need a high degree of abstraction or readability but really only some indication value we will keep it simple. In python, not all operations on lists are atomic so that they just miss in the end result. That is quite useful if you know what they should be. So the concurrency issue indicator will be a function of how many non atomic operations on a list have not been "executed" (e.g. are missing) compared to how many should have been "executed, the delta is the indicator.
 
+The from the SICCL script generated python script includes the calculation of the indicator(the delta of all threads(loops) in which the variable is increased by one, and the actual value of the variable).
+If there is not enough mutexe, the add operation might not be applied on the variable, which does not get increased as a result. The greater the difference of the value, the variable should have had(the sum of all the loops it's referenced in) and the actual value, the more collisions were happening.
+That does not compensate for potential data races, but that can be added later.
+
+### Detection resuluts
+
+This very simple indicator works great with a very low error rate compared to its delta of mutex vs no mutex usage.
+
+- Results with 2 variables, 4 threads, with 2(different) mutexe and 1 sec runtime:
+    Script:
+    ```python
+    #   parent arr, thread id, var id, mutex id
+    siccl_example_flattened = np.array([[0, 1, 2, 2],
+                                        [0, 1, 3, 3],
+                                        [1, 5, 2, 2], 
+                                        [1, 5, 3, 3], 
+                                        [5, 6, 2, 2], 
+                                        [5, 6, 3, 3], 
+                                        [5, 7, 2, 2]], dtype=int) 
+    ```
+    Results:
+    ```
+    var 2 diff:  -57
+    var 3 diff:  -32
+    ```
+    A negative difference should theoretically not be possible since it would indicate that there have been more iterations applied on a variable then there actually were. That's the error, which is somewhere in the lower second digits, which is negligible compared to the non-atomic addition operation misses if there are no mutexe.
+
+- Results with 2 variables, 4 threads, *0* mutexe and 1 sec runtime:
+    Script:
+    ```python
+    #   parent arr, thread id, var id, mutex id
+    siccl_example_flattened = np.array([[0, 1, 2, 0],
+                                        [0, 1, 3, 0],
+                                        [1, 5, 2, 0], 
+                                        [1, 5, 3, 0], 
+                                        [5, 6, 2, 0], 
+                                        [5, 6, 3, 0], 
+                                        [5, 7, 2, 0]], dtype=int) 
+    ```
+    Results:
+    ```
+    var 2 diff:  3604555
+    var 3 diff:  1838930
+    ```
+    As we can see, without any mutexe, the amount of missed non-atomic addition operation increases drasticly per variable.
+
 ### Simple Initial Concurrency Configuration Language (SICCL)
 
 SICCL is a very rudamentary formal language describing intitial concurrent configurations of a program. 
