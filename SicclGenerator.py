@@ -10,6 +10,8 @@ class CodeGeneratorBackend:
         self.code: list[string] = []
         self.tab = "    "
         self.level = 0
+    def reset(self):
+        self.code = []
 
     def end(self):
         return "".join(self.code)
@@ -32,6 +34,10 @@ class SicclGenerator():
         self.known_mutexe: list[int] = []
         self.thread_pgraph: list[list[int, list[int]]] = []
         self.siccl_config_test_time = siccl_config_test_time
+    def reset(self):
+        self.known_vars = []
+        self.known_mutexe = []
+        self.thread_pgraph = []
 
     def end_loops_timer_thread(self):
         self.backend.dedent()
@@ -74,7 +80,7 @@ class SicclGenerator():
         self.backend.write('for i, var in enumerate(end_loop_shared_vars_res): \n')
         self.backend.indent()
         self.backend.write('average = sum(var[1]) / len(var[1])\n')
-        self.backend.write('print("var", var[0], "diff: ", shared_vars_count[i][1]-average)\n')
+        self.backend.write('print(str(var[0]) + ":" + str(shared_vars_count[i][1]-average))\n')
         self.backend.dedent()
         self.backend.write('\n')
         
@@ -291,6 +297,8 @@ class SicclGenerator():
 
     # probably one of the most inefficient thing I've ever written...
     def generate(self, siccl_array: list) -> string:
+        self.backend.reset()
+        self.reset()
         # generating the graphs seperately is a (great)bit more inefficient but more readable
         thread_dgraph = self.generate_thread_dependency_graph(siccl_array)
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array)

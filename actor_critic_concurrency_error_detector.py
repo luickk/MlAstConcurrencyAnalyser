@@ -10,14 +10,14 @@ n_max_mutex = 100
 num_hidden = 128
 
 num_actions = 2
-                            #   parent arr, thread name, var name, mutex name
-siccl_example_flattened = np.array([[0, 1, 2, 4],
-                                    [0, 1, 3, 4],
-                                    [1, 5, 2, 4], 
+# parent arr, thread name, var name, mutex name
+siccl_example_flattened = np.array([[0, 1, 2, 0],
+                                    [0, 1, 3, 0],
+                                    [1, 5, 2, 0], 
                                     [1, 5, 3, 0], 
-                                    [5, 6, 2, 4], 
-                                    [5, 6, 2, 4], 
-                                    [5, 7, 2, 4]], dtype=int)
+                                    [5, 6, 2, 0], 
+                                    [5, 6, 3, 0], 
+                                    [5, 7, 2, 0]], dtype=int)
 n_indices = len(siccl_example_flattened)
 n_mutexe = 10
 gamma = 0.99  # Discount factor for past rewards

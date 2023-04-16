@@ -27,7 +27,7 @@ def end_loops_timer_thread():
     assert(len(shared_vars_count) == len(end_loop_shared_vars_res))
     for i, var in enumerate(end_loop_shared_vars_res): 
         average = sum(var[1]) / len(var[1])
-        print("var", var[0], "diff: ", shared_vars_count[i][1]-average)
+        print(str(var[0]) + ":" + str(shared_vars_count[i][1]-average))
     
     
 
@@ -39,8 +39,8 @@ def main():
     mutex_2 = threading.Lock()
     global mutex_3
     mutex_3 = threading.Lock()
-    var_2 = [93, 43]
-    var_3 = [13, 30]
+    var_2 = [71, 63]
+    var_3 = [7, 68]
     t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
     t_5.start()
     while not exit_loops:

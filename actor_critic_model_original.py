@@ -103,13 +103,14 @@ while True:  # Run until solved
             # from environment state
             action_probs, critic_value = model(state)
             critic_value_history.append(critic_value[0, 0])
-            print(action_probs)
+            # print(action_probs)
             # Sample action from action probability distribution
             action = np.random.choice(num_actions, p=np.squeeze(action_probs))
             action_probs_history.append(tf.math.log(action_probs[0, action]))
 
             # Apply the sampled action in our environment
             state, reward, done, _, _ = env.step(action)
+            print(reward)
             rewards_history.append(reward)
             episode_reward += reward
 

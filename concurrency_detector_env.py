@@ -1,6 +1,7 @@
 from SicclGenerator import SicclGenerator
 import itertools
 import numpy as np
+import os
 import utils
 import pandas as pd
 import sys
@@ -45,16 +46,23 @@ class ConcurrencyDetectorEnvironment:
 		self.res_text = self.gen.generate(self.siccl_arr)
 
 		reward = 0
+		# print(self.res_text)
 
-		try:
-			ok_rc = subprocess.Popen(['python3', '-c', self.res_text], stdout=subprocess.PIPE)
-			print(ok_rc.stdout.read())
-			ok_rc.communicate()
-		except subprocess.CalledProcessError as e:
-			return self.siccl_arr, -10, False
-		
+		ok_rc = subprocess.Popen(['python3', '-c', self.res_text], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		output =  ok_rc.stdout.read()
+		err_outp = ok_rc.stderr.read()
+		ok_rc.communicate()
 
-		reward = 1
+		if len(err_outp) != 0:
+			output = output.decode("utf-8").split("\n")
+			for res in output:
+				split_res = res.split(":")
+				if len(split_res) == 2:
+					print("+ ", float(split_res[1]))
+					reward += float(split_res[1])
+		else:
+			reward = -200
+		print(reward)
 		# state, reward, done
 		return self.siccl_arr, reward, False
 

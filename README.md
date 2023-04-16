@@ -1,14 +1,14 @@
 # Concurrency analysis based on Ml training with run/compile time data 
 
-The basic idea is to train a ML model, in a unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of SICCL(see below) code without being trained on a dataset.
+The basic idea is to train a ML model, in an unsupervised self-testing environment, advanced patterns of concurrency issues. The goal is to have it output a probability value for any given piece of SICCL(see below) code without being trained on a dataset.
 
 Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping a certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
 
 # Todo
 
 - [x] Approximating feasibility of the project
-	- Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
-	- Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
+    - Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
+    - Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
 - [x] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
 - [ ] Putting it all together....
 
@@ -19,13 +19,13 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
 
 Since it's difficult to generate a dataset, a reinforcement learning approach is the most obvious to choose. The great problem is the generation of sample programs that are executable and *have a high enough entropy*.
 
-Since generating python code is simply too complex for a simple reinforcement learning model I created SICCL(Simple Initial Concurrency Configuration Language -> see below), which acts as an abstraction layer to the reinforcement learning model. Since finding a proper policy function for a "language" is difficult, I will be using a [model free approach](https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)).
+Since generating python code is simply too complex for a simple reinforcement learning model, I created SICCL(Simple Initial Concurrency Configuration Language -> see below), which acts as an abstraction layer to the reinforcement learning model. Since finding a proper policy function for a "language" is difficult, I will be using a [model free approach](https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)).
 
-The basic values the model will optimise for are size (len of the SICCL script) and validity. Crashes or bad static scans (for example through valgrind) will result in bad scores...
+The basic values the model will optimize for are size (len of the SICCL script) and validity. Crashes or bad static scans (for example through valgrind) will result in bad scores...
 
 ## Code Generation
 
-The GAN generates SICCL (see below) which is then turned into python code, run and tested on potential concurrency issues. Wether there was an issue and all kinds of runtime information is then passed to the GAN to optimise on.
+The GAN generates SICCL (see below) which is then turned into python code, run and tested on potential concurrency issues. Whether there was an issue and all kinds of runtime information is then passed to the GAN to optimize on.
 
 ## Concurrency issue detection
 
@@ -56,7 +56,7 @@ This very simple indicator works great with a very low error rate compared to it
     var 2 diff:  -57
     var 3 diff:  -32
     ```
-    A negative difference should theoretically not be possible since it would indicate that there have been more iterations applied on a variable then there actually were. That's the error, which is somewhere in the lower second digits, which is negligible compared to the non-atomic addition operation misses if there are no mutexe.
+    A negative difference should theoretically not be possible, since it would indicate that there have been more iterations applied on a variable than there actually were. That's the error, which is somewhere in the lower second digits, which is negligible compared to the non-atomic addition operation misses if there are no mutexe.
 
 - Results with 2 variables, 4 threads, *0* mutexe and 1 sec runtime:
     Script:
@@ -75,13 +75,13 @@ This very simple indicator works great with a very low error rate compared to it
     var 2 diff:  3604555
     var 3 diff:  1838930
     ```
-    As we can see, without any mutexe, the amount of missed non-atomic addition operation increases drasticly per variable.
+    As we can see, without any mutexe, the amount of missed non-atomic addition operation increases drastically per variable.
 
 ### Simple Initial Concurrency Configuration Language (SICCL)
 
-SICCL is a very rudamentary formal language describing intitial concurrent configurations of a program. 
-The only entities are threads and variales. Every new dimension resembles a new thread. 
-In the future the language could include gramar/ syntax for locking, syncing, timing delays to provide a reduced but complex enough environment for the model to experiment with.
+SICCL is a very rudimentary formal language describing initial concurrent configurations of a program. 
+The only entities are threads and variables. Every new dimension resembles a new thread. 
+In the future the language could include grammar/ syntax for locking, syncing, timing delays to provide a reduced but complex enough environment for the model to experiment with.
 
 Originally I wanted to go with a multidimensional tree like structure where every new axis was a new thread. That was a lot more elegant, not just for readability, but also for generation. The problem was that numpy/ tensorflow doesn't really support multi axis arrays with different sizes, and transforming (mostly padding) them is more complex than just going with an already flattened(static in size and axes) structure. The new flattened version has the problem that thread information needs to be encoded as well.
 For example:
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 ```
 ## Fundamentals
 
-It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden in or built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundemntals though.
+It's difficult to find information on how modern thread sanitizers work and existing sanitizers are hidden in or built on top of big codebases which makes it difficult to learn from them. [This](https://static.googleusercontent.com/media/research.google.com/de//pubs/archive/35604.pdf) is a great paper on the fundamentals though.
 
 ## Tools for Instrumentation/ Interception, AST analysis
 

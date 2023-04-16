@@ -2,7 +2,7 @@ import numpy as np
 from SicclGenerator import SicclGenerator
 
 if __name__ == "__main__":
-    # #   parent arr, thread name, var name, mutex name
+    #   parent arr, thread name, var name, mutex name
     siccl_example_flattened = np.array([[0, 1, 2, 2],
                                         [0, 1, 3, 3],
                                         [1, 5, 2, 2], 
@@ -25,5 +25,5 @@ if __name__ == "__main__":
     f.write(text)
     f.close()
 
-    print(text)
+    # print(text)
     
