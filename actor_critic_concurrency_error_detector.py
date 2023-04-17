@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+import matplotlib.pyplot as plt
 from concurrency_detector_env import ConcurrencyDetectorEnvironment
 
 n_max_mutex = 100
@@ -21,8 +22,7 @@ siccl_example_flattened = np.array([[0, 1, 2, 0],
 n_indices = len(siccl_example_flattened)
 n_mutexe = 10
 gamma = 0.99  # Discount factor for past rewards
-max_steps_per_episode = 100
-
+max_steps_per_episode = 10
 
 
 env = ConcurrencyDetectorEnvironment(siccl_example_flattened, 1)
@@ -104,6 +104,7 @@ while True:  # Run until solved
         returns = np.array(returns)
         returns = (returns - np.mean(returns)) / (np.std(returns) + eps)
         returns = returns.tolist()
+
         # Calculating loss values to update our network
         history = zip(action_probs_history, critic_value_history, returns)
 
@@ -127,7 +128,8 @@ while True:  # Run until solved
 
         grads = tape.gradient(loss_value, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-
+        print("loss", loss_value)
+        print(env.siccl_arr)
         # Clear the loss and reward history
         action_probs_history.clear()
         critic_value_history.clear()

@@ -110,7 +110,7 @@ while True:  # Run until solved
 
             # Apply the sampled action in our environment
             state, reward, done, _, _ = env.step(action)
-            print(reward)
+            # print(reward)
             rewards_history.append(reward)
             episode_reward += reward
 

@@ -155,7 +155,7 @@ class SicclGenerator():
                             for mutexe_per_thread in thread_mgraph:                
                                 if mutexe_per_thread[0] == dependant_thread:
                                     for next_thread_mutex in mutexe_per_thread[1]:
-                                        if mutex_name != 0:
+                                        if next_thread_mutex != 0:
                                             if next_thread_mutex not in self.known_mutexe:
                                                 self.backend.write("global mutex_{0}\n".format(next_thread_mutex))
                                                 self.backend.write("mutex_{0} = threading.Lock()\n".format(next_thread_mutex))
@@ -183,6 +183,10 @@ class SicclGenerator():
             # self.backend.write('print("?")\n')
             if var_name in self.known_vars:
                 if mutex_name != 0:
+                    if mutex_name not in self.known_mutexe:
+                        self.backend.write("global mutex_{0}\n".format(mutex_name))
+                        self.backend.write("mutex_{0} = threading.Lock()\n".format(mutex_name))
+                        self.known_mutexe.append(mutex_name)
                     self.backend.write("mutex_{0}.acquire()\n".format(mutex_name))
 
                 self.backend.write('var_{0}[0] += 1\n'.format(var_name))

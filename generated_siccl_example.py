@@ -35,22 +35,14 @@ def main():
     arguments = locals()
     loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) 
     loop_stop_thread.start()
-    global mutex_2
-    mutex_2 = threading.Lock()
-    global mutex_3
-    mutex_3 = threading.Lock()
-    var_2 = [71, 63]
-    var_3 = [7, 68]
+    var_2 = [96, 82]
+    var_3 = [73, 24]
     t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
     t_5.start()
     while not exit_loops:
         per_thread_loop_count[1] += 1
-        mutex_2.acquire()
         var_2[0] += 1
-        mutex_2.release()
-        mutex_3.acquire()
         var_3[0] += 1
-        mutex_3.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -67,16 +59,14 @@ def thread_5(var_2, var_3):
     arguments = locals()
     t_6 = Thread(target=thread_6, args=(var_2, var_3,)) 
     t_6.start()
+    global mutex_4
+    mutex_4 = threading.Lock()
     t_7 = Thread(target=thread_7, args=(var_2,)) 
     t_7.start()
     while not exit_loops:
         per_thread_loop_count[5] += 1
-        mutex_2.acquire()
         var_2[0] += 1
-        mutex_2.release()
-        mutex_3.acquire()
         var_3[0] += 1
-        mutex_3.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -93,12 +83,8 @@ def thread_6(var_2, var_3):
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[6] += 1
-        mutex_2.acquire()
         var_2[0] += 1
-        mutex_2.release()
-        mutex_3.acquire()
         var_3[0] += 1
-        mutex_3.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -115,9 +101,9 @@ def thread_7(var_2):
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[7] += 1
-        mutex_2.acquire()
+        mutex_4.acquire()
         var_2[0] += 1
-        mutex_2.release()
+        mutex_4.release()
 
 if __name__ == "__main__":
     main()

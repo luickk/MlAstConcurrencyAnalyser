@@ -53,7 +53,7 @@ class ConcurrencyDetectorEnvironment:
 		err_outp = ok_rc.stderr.read()
 		ok_rc.communicate()
 
-		if len(err_outp) != 0:
+		if len(err_outp) == 0:
 			output = output.decode("utf-8").split("\n")
 			for res in output:
 				split_res = res.split(":")
@@ -61,7 +61,8 @@ class ConcurrencyDetectorEnvironment:
 					print("+ ", float(split_res[1]))
 					reward += float(split_res[1])
 		else:
-			reward = -200
+			reward = 4000000
+		reward = 1 - utils.map_value(reward, -40, 4000000, 0, 1)
 		print(reward)
 		# state, reward, done
 		return self.siccl_arr, reward, False
