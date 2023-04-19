@@ -31,19 +31,19 @@ eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 
 inputs = layers.Input(shape=(28,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
 
-action = layers.Dense(num_actions, activation="softmax")(common)
+# action = layers.Dense(num_actions, activation="softmax")(common)
 action_indices = layers.Dense(n_indices, activation="softmax")(common)
 action_mutex_id = layers.Dense(n_mutexe, activation="softmax")(common)
 
 critic = layers.Dense(1)(common)
 
-model = keras.Model(inputs=inputs, outputs=[action, action_indices, action_mutex_id, critic])
+model = keras.Model(inputs=inputs, outputs=[action_indices, action_mutex_id, critic])
 
 """
 ## Train
 """
 
-optimizer = keras.optimizers.Adam(learning_rate=0.01)
+optimizer = keras.optimizers.Adam(learning_rate=0.1)
 huber_loss = keras.losses.Huber()
 action_probs_history = []
 critic_value_history = []
@@ -64,26 +64,28 @@ while True:  # Run until solved
             # Predict action probabilities and estimated future rewards
             # from environment state
 
-            action_probs, indices_probs, mutexe_probs, critic_value = model(state)
+            indices_probs, mutexe_probs, critic_value = model(state)
             critic_value_history.append(critic_value[0, 0])
 
             # Sample action from action probability distribution
 
-            action = np.random.choice(a=num_actions, p=np.squeeze(action_probs))
+            # action = np.random.choice(a=num_actions, p=np.squeeze(action_probs))
             index = np.random.choice(a=n_indices, p=np.squeeze(indices_probs))
             mutex_id = np.random.choice(a=n_mutexe, p=np.squeeze(mutexe_probs))
 
             # adding average of multi action confidence to history
-            action_probs_history.append(tf.math.log(np.average([action_probs[0, action], indices_probs[0, index], mutexe_probs[0, mutex_id]])))
+            action_probs_history.append(tf.math.log(np.average([indices_probs[0, index], mutexe_probs[0, mutex_id]])))
 
-            # print(action, index, mutex_id)
+            # print(index, mutex_id)
             # Apply the sampled action in our environment
-            state, reward, done = env.step((action, index, mutex_id))
+            state, reward, done = env.step((index, mutex_id))
             # print(state)
             state = state.flatten()
             rewards_history.append(reward)
             episode_reward += reward
-
+            
+            print((index, mutex_id))
+            print(env.siccl_arr)
             if done:
                 break
 
@@ -128,8 +130,7 @@ while True:  # Run until solved
 
         grads = tape.gradient(loss_value, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        print("loss", loss_value)
-        print(env.siccl_arr)
+        print("loss:", loss_value)
         # Clear the loss and reward history
         action_probs_history.clear()
         critic_value_history.clear()

@@ -35,13 +35,17 @@ def main():
     arguments = locals()
     loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) 
     loop_stop_thread.start()
-    var_2 = [96, 82]
-    var_3 = [73, 24]
+    var_2 = [91, 31]
+    var_3 = [2, 12]
     t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
     t_5.start()
     while not exit_loops:
         per_thread_loop_count[1] += 1
+        global mutex_4
+        mutex_4 = threading.Lock()
+        mutex_4.acquire()
         var_2[0] += 1
+        mutex_4.release()
         var_3[0] += 1
     arguments_list = arguments.items()
     params = []
@@ -59,8 +63,6 @@ def thread_5(var_2, var_3):
     arguments = locals()
     t_6 = Thread(target=thread_6, args=(var_2, var_3,)) 
     t_6.start()
-    global mutex_4
-    mutex_4 = threading.Lock()
     t_7 = Thread(target=thread_7, args=(var_2,)) 
     t_7.start()
     while not exit_loops:
@@ -101,9 +103,7 @@ def thread_7(var_2):
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[7] += 1
-        mutex_4.acquire()
         var_2[0] += 1
-        mutex_4.release()
 
 if __name__ == "__main__":
     main()

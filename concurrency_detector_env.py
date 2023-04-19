@@ -29,19 +29,19 @@ class ConcurrencyDetectorEnvironment:
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
 
-	# action tuple: action, index, mutex id
-	def step(self, action: (int, int, int)):
-		index = np.unravel_index(action[1], self.siccl_arr.shape)[0]
+	# action tuple: index, mutex id
+	def step(self, action: (int, int)):
+		index = action[0]
 		mutex_name = self.siccl_arr[index][3]
 		var_name = self.siccl_arr[index][2]
 		thread_name = self.siccl_arr[index][1]
 		parent_thread = self.siccl_arr[index][0]
 		# add mutex
-		if action[0] == 0:
-			self.siccl_arr[index][3] = str(action[2])
-		# remove mutex
-		if action[0] == 1:
-			self.siccl_arr[index][3] = 0
+		# if action[0] == 1:
+		self.siccl_arr[index][3] = str(action[1])
+		# # remove mutex
+		# if action[0] == 0:
+		# 	self.siccl_arr[index][3] = 0
 
 		self.res_text = self.gen.generate(self.siccl_arr)
 
@@ -61,8 +61,9 @@ class ConcurrencyDetectorEnvironment:
 					print("+ ", float(split_res[1]))
 					reward += float(split_res[1])
 		else:
-			reward = 4000000
-		reward = 1 - utils.map_value(reward, -40, 4000000, 0, 1)
+			print("crahs!?: ", err_outp)
+			reward = 6000000
+		reward = 1 - utils.map_value(reward, -40, 6000000, 0, 1)
 		print(reward)
 		# state, reward, done
 		return self.siccl_arr, reward, False

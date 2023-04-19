@@ -10,8 +10,62 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
     - Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
     - Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
 - [x] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
-- [ ] Putting it all together....
+- [x] Putting it all together....
 
+## Log Book
+
+### First working version (commit: )
+
+This commit contains the first working version of the project. The network manages to assign new variables the same mutexe over different threads. Although being a very(very) simple task to accomplish, the little time it took the network to get there makes me very optimistic that when scaling the complexity and context information, the network will be able to keep up.
+
+Initial SICCL matrix:
+
+```
+# parent arr, thread name, var name, mutex name
+siccl_example_flattened = np.array([[0, 1, 2, 0],
+                                    [0, 1, 3, 0],
+                                    [1, 5, 2, 0], 
+                                    [1, 5, 3, 0], 
+                                    [5, 6, 2, 0], 
+                                    [5, 6, 3, 0], 
+                                    [5, 7, 2, 0]], dtype=int)
+```
+
+After 10 iterations:
+
+```
+[[0 1 2 0]
+ [0 1 3 9]
+ [1 5 2 0]
+ [1 5 3 1]
+ [5 6 2 1]
+ [5 6 3 1]
+ [5 7 2 0]]
+```
+Missing non atomic operations:  
+3: 1567951.0
+3: 259231.5
+Reward: 0.695464946900354
+Loss: -3
+
+
+After 200 iterations
+```
+[[0 1 2 0]
+ [0 1 3 1]
+ [1 5 2 0]
+ [1 5 3 1]
+ [5 6 2 1]
+ [5 6 3 1]
+ [5 7 2 0]]
+2: 250748.0
+3:  0.5
+```
+Missing non atomic operations:  
+- 250748.0
+- 0.5
+Reward: 0.9582021953186979
+Loss: 1
 
 # Approach
 
