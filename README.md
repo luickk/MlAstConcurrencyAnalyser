@@ -14,7 +14,7 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
 
 ## Log Book
 
-### First working version (commit: )
+### First working version (commit: 51d400eff8cbf0ef557caf6cc3c442c4b9b7f9e8)
 
 This commit contains the first working version of the project. The network manages to assign new variables the same mutexe over different threads. Although being a very(very) simple task to accomplish, the little time it took the network to get there makes me very optimistic that when scaling the complexity and context information, the network will be able to keep up.
 
