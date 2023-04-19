@@ -14,7 +14,7 @@ Note: Throwing Ml against NP complete problems is nothing new, in this case it's
 
 ## Log Book
 
-### First working version (commit: 51d400eff8cbf0ef557caf6cc3c442c4b9b7f9e8)
+### First working version ([commit](https://github.com/luickk/MlBasedConcurrencyAnalysis/commit/51d400eff8cbf0ef557caf6cc3c442c4b9b7f9e8))
 
 This commit contains the first working version of the project. The network manages to assign new variables the same mutexe over different threads. Although being a very(very) simple task to accomplish, the little time it took the network to get there makes me very optimistic that when scaling the complexity and context information, the network will be able to keep up.
 
@@ -43,10 +43,10 @@ After 10 iterations:
  [5 7 2 0]]
 ```
 Missing non atomic operations:  
-3: 1567951.0
-3: 259231.5
-Reward: 0.695464946900354
-Loss: -3
+- 3: 1567951.0
+- 3: 259231.5
+- Reward: 0.695464946900354
+- Loss: -3
 
 
 After 200 iterations
@@ -64,8 +64,8 @@ After 200 iterations
 Missing non atomic operations:  
 - 250748.0
 - 0.5
-Reward: 0.9582021953186979
-Loss: 1
+- Reward: 0.9582021953186979
+- Loss: 1
 
 # Approach
 

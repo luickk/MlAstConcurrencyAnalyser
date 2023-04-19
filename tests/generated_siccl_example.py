@@ -35,17 +35,13 @@ def main():
     arguments = locals()
     loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) 
     loop_stop_thread.start()
-    var_2 = [91, 31]
-    var_3 = [2, 12]
+    var_2 = [72, 45]
+    var_3 = [77, 67]
     t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
     t_5.start()
     while not exit_loops:
         per_thread_loop_count[1] += 1
-        global mutex_4
-        mutex_4 = threading.Lock()
-        mutex_4.acquire()
         var_2[0] += 1
-        mutex_4.release()
         var_3[0] += 1
     arguments_list = arguments.items()
     params = []

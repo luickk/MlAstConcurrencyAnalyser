@@ -1,4 +1,6 @@
 import numpy as np
+import sys
+sys.path.append("..") 
 from SicclGenerator import SicclGenerator
 
 if __name__ == "__main__":
