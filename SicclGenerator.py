@@ -49,29 +49,23 @@ class SicclGenerator():
         
         self.backend.write('time.sleep(0.5)\n')
 
-        self.backend.write('shared_vars_count: list[int, int] = []\n')
+        self.backend.write('shared_vars_count: dict[int, int] = {}\n')
         stringified_thread_dgraph = utils.print_to_string(self.thread_pgraph)
         self.backend.write('thread_pgraph = {0}\n'.format(stringified_thread_dgraph))
-        self.backend.write('for i_thread, thread in enumerate(thread_pgraph):\n')
+        self.backend.write('for thread, params in thread_pgraph.items():\n')
         self.backend.indent()
-        self.backend.write('for dgraph_var in thread[1]:\n')
+        self.backend.write('for dgraph_var in params:\n')
         self.backend.indent()
-        self.backend.write('found = False\n')
-        self.backend.write('for var_count in shared_vars_count:\n')
+        self.backend.write('if dgraph_var in shared_vars_count:\n')
         self.backend.indent()
-        self.backend.write('if dgraph_var == var_count[0]:\n')
-        self.backend.indent()
-        self.backend.write('found = True\n')
-        self.backend.write('var_count[1] += per_thread_loop_count[thread[0]]\n')
+        self.backend.write('shared_vars_count[dgraph_var] += per_thread_loop_count[thread]\n')
         self.backend.dedent()
-        self.backend.dedent()
-        self.backend.write('if not found:\n')
+        self.backend.write('else:\n')
         self.backend.indent()
-        self.backend.write('shared_vars_count.append([dgraph_var, per_thread_loop_count[thread[0]]])\n')
+        self.backend.write('shared_vars_count[dgraph_var] = [per_thread_loop_count[thread]]\n')
         self.backend.dedent()
         self.backend.dedent()
         self.backend.dedent()
-        
 
         # self.backend.write('print(per_thread_loop_count)\n')
         # self.backend.write('print(shared_vars_count)\n')
@@ -127,7 +121,7 @@ class SicclGenerator():
         self.backend.indent()
         self.backend.write('arguments = locals()\n')
 
-    def traverse_tree(self, root_call: bool, siccl_array: np.array, thread_dgraph: list[list[int, list[int]]], thread_mgraph: list[list[int, list[int]]], thread_pgraph: list[tuple[int, list[int]]]) -> None:
+    def traverse_tree(self, root_call: bool, siccl_array: np.array, thread_dgraph: dict[list[int, list[int]]], thread_mgraph: dict[list[int, list[int]]], thread_pgraph: dict[tuple[int, list[int]]]) -> None:
         inited_mutexe: list[int] = []
         last_thread_name = 0
         for i_siccl_arr, var in enumerate(siccl_array):
@@ -143,37 +137,32 @@ class SicclGenerator():
                     root_call = False
                 else: 
                     thread_params: list[int] = []
-                    for params_per_thread in thread_pgraph:
-                        if params_per_thread[0] == thread_name:
-                            thread_params = params_per_thread[1]
+                    if thread_name in thread_pgraph:
+                        thread_params = thread_pgraph[thread_name]
                     self.create_thread(thread_name, thread_params);
 
 
-                for deps_per_thread in thread_dgraph:
-                    if deps_per_thread[0] == thread_name:
-                        for dependant_thread in deps_per_thread[1]:
-                            for mutexe_per_thread in thread_mgraph:                
-                                if mutexe_per_thread[0] == dependant_thread:
-                                    for next_thread_mutex in mutexe_per_thread[1]:
-                                        if next_thread_mutex != 0:
-                                            if next_thread_mutex not in self.known_mutexe:
-                                                self.backend.write("global mutex_{0}\n".format(next_thread_mutex))
-                                                self.backend.write("mutex_{0} = threading.Lock()\n".format(next_thread_mutex))
-                                                self.known_mutexe.append(next_thread_mutex)
-                            thread_params: list[int] = []
-                            for params_per_thread in thread_pgraph:
-                                if params_per_thread[0] == dependant_thread:
-                                    thread_params = params_per_thread[1]
-
-
-                            stringiefied_t_params = thread_params.copy()
-                            for i, param in enumerate(stringiefied_t_params):
-                                stringiefied_t_params[i] =  "var_" + str(param)
-                                if param not in self.known_vars:
-                                    self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, 0, 0))
-                                    self.known_vars.append(param)
-                            self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
-                            self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
+                if thread_name in thread_dgraph:
+                    for dependant_thread in thread_dgraph[thread_name]:
+                        if dependant_thread in thread_mgraph:
+                            for next_thread_mutex in thread_mgraph[dependant_thread]:
+                                if next_thread_mutex != 0:
+                                    if next_thread_mutex not in self.known_mutexe:
+                                        self.backend.write("global mutex_{0}\n".format(next_thread_mutex))
+                                        self.backend.write("mutex_{0} = threading.Lock()\n".format(next_thread_mutex))
+                                        self.known_mutexe.append(next_thread_mutex)
+                        thread_params: list[int] = []
+                        if dependant_thread in thread_pgraph:
+                            thread_params = thread_pgraph[dependant_thread]
+                        
+                        stringiefied_t_params = thread_params.copy()
+                        for i, param in enumerate(stringiefied_t_params):
+                            stringiefied_t_params[i] =  "var_" + str(param)
+                            if param not in self.known_vars:
+                                self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, 0, 0))
+                                self.known_vars.append(param)
+                        self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
+                        self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
 
 
                 self.backend.write('while not exit_loops:\n')
@@ -212,8 +201,8 @@ class SicclGenerator():
             
             last_thread_name = thread_name
     # list threads with its threads (dependencies)
-    def generate_thread_dependency_graph(self, siccl_array: np.array) -> list[list[int, list[int]]]:
-        thread_dgraph: list[int, list[int]] = []
+    def generate_thread_dependency_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+        thread_dgraph: dict[int, list[int]] = {}
 
         last_thread_name = 0
         for i, elem in enumerate(siccl_array):
@@ -224,13 +213,11 @@ class SicclGenerator():
             if last_thread_name != thread_name:
                 i = 0
                 found = False
-                for i, node in enumerate(thread_dgraph):
-                    if node[0] == parent_thread:
-                        found = True
-                        if thread_name not in node[1]:
-                            node[1].append(thread_name)
-                if not found:
-                    thread_dgraph.append((parent_thread, [thread_name]))
+                if parent_thread in thread_dgraph:
+                    if thread_name not in thread_dgraph[parent_thread]:
+                        thread_dgraph[parent_thread].append(thread_name)
+                else:
+                    thread_dgraph[parent_thread] = [thread_name]
 
             last_thread_name = thread_name
 
@@ -247,8 +234,8 @@ class SicclGenerator():
         return res
 
     # list threads with its parameters (variables required/ share)
-    def generate_thread_params_graph(self, siccl_array: np.array) -> list[list[int, list[int]]]:
-        thread_pgraph: list[int, list[int]] = []
+    def generate_thread_params_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+        thread_pgraph: dict[int, list[int]] = {}
         last_thread_name = 0
         for i, elem in enumerate(siccl_array):
             var_name = elem[2]
@@ -260,23 +247,21 @@ class SicclGenerator():
             # print(params)
             
             if last_thread_name != thread_name:
-                thread_pgraph.append((thread_name, params))
+                thread_pgraph[thread_name] = params
             last_thread_name = thread_name
-                
-            for i, node in enumerate(thread_pgraph):
-                if node[0] == parent_thread:
-                    node[1].extend(params)
-        # it's so ugly, it hurts
-        for node in thread_pgraph:
-            dups_removed = utils.remove_dup(node[1])
-            node[1].clear()
-            node[1].extend(dups_removed)
+            
+            if parent_thread in thread_pgraph:
+                thread_pgraph[parent_thread].extend(params)
+
+        for node, node_params in thread_pgraph.items():
+            dups_removed = utils.remove_dup(node_params)
+            node_params.clear()
+            node_params.extend(dups_removed)
         return thread_pgraph
 
     # list threads with its mutexe
-    def generate_thread_mutex_graph(self, siccl_array: np.array) -> list[list[int, list[int]]]:
-        thread_mutex_graph: list[int, list[int]] = []
-
+    def generate_thread_mutex_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+        thread_mutex_graph: dict[int, list[int]] = {}
         for i, elem in enumerate(siccl_array):
             mutex_name = elem[3]
             var_name = elem[2]
@@ -284,13 +269,11 @@ class SicclGenerator():
             parent_thread = elem[0]
             found = False
 
-            for i, node in enumerate(thread_mutex_graph):
-                if thread_name == node[0]:
-                    found = True
-                    if mutex_name not in node[1] and mutex_name != 0:
-                        node[1].append(mutex_name)
-            if not found:
-                thread_mutex_graph.append((thread_name, [mutex_name]))
+            if parent_thread in thread_mutex_graph:
+                if mutex_name not in thread_mutex_graph[mutex_name] and mutex_name != 0:
+                    thread_mutex_graph[mutex_name].append(mutex_name)
+            else:
+                thread_mutex_graph = [mutex_name]
 
         return thread_mutex_graph
 
