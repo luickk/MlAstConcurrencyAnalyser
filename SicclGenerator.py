@@ -77,10 +77,10 @@ class SicclGenerator():
         # self.backend.write('print(shared_vars_count)\n')
         # self.backend.write('print(end_loop_shared_vars_res)\n')
         self.backend.write('assert(len(shared_vars_count) == len(end_loop_shared_vars_res))\n')
-        self.backend.write('for i, var in enumerate(end_loop_shared_vars_res): \n')
+        self.backend.write('for i, (key, val) in enumerate(end_loop_shared_vars_res.items()): \n')
         self.backend.indent()
-        self.backend.write('average = sum(var[1]) / len(var[1])\n')
-        self.backend.write('print(str(var[0]) + ":" + str(shared_vars_count[i][1]-average))\n')
+        self.backend.write('average = sum(val) / len(val)\n')
+        self.backend.write('print(str(key) + ":" + str(shared_vars_count[i][1]-average))\n')
         self.backend.dedent()
         self.backend.write('\n')
         
@@ -97,7 +97,7 @@ class SicclGenerator():
         self.backend.write('from threading import Thread\n')
         self.backend.write('\n')
         self.backend.write("exit_loops = False\n")
-        self.backend.write("end_loop_shared_vars_res: list[int, list[int]] = []\n")
+        self.backend.write("end_loop_shared_vars_res: dict[int, list[int]] = {}\n")
         highest_thread_id = 0
         for elem in siccl_array:
             if elem[1] > highest_thread_id:
@@ -170,7 +170,7 @@ class SicclGenerator():
                             for i, param in enumerate(stringiefied_t_params):
                                 stringiefied_t_params[i] =  "var_" + str(param)
                                 if param not in self.known_vars:
-                                    self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, randint(0, 100), randint(0, 100)))
+                                    self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, 0, 0))
                                     self.known_vars.append(param)
                             self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
                             self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
@@ -193,8 +193,7 @@ class SicclGenerator():
 
                 if mutex_name != 0:
                     self.backend.write("mutex_{0}.release()\n".format(mutex_name))
-
-            if i_siccl_arr < len(siccl_array)-1 and siccl_array[i_siccl_arr+1][1] != thread_name:
+            if i_siccl_arr < len(siccl_array)-1 and siccl_array[i_siccl_arr+1][1] != thread_name or i_siccl_arr == len(siccl_array)-1:
                 self.backend.dedent()
                 self.backend.write('arguments_list = arguments.items()\n')
                 self.backend.write('params = []\n')
@@ -202,17 +201,13 @@ class SicclGenerator():
                 self.backend.write('for i, param in enumerate(params):\n')
                 self.backend.indent()
                 self.backend.write('found = False\n')
-                self.backend.write('for elem in end_loop_shared_vars_res:\n'.format(thread_name))
+                self.backend.write('if param in end_loop_shared_vars_res:\n'.format(thread_name))
                 self.backend.indent()
-                self.backend.write('if elem[0] == param:\n')
-                self.backend.indent()
-                self.backend.write('found = True\n')
-                self.backend.write('elem[1].append(arguments["var_" + str(param)][0])\n')
+                self.backend.write('end_loop_shared_vars_res[param].append(arguments["var_" + str(param)][0])\n')
                 self.backend.dedent()
-                self.backend.dedent()
-                self.backend.write('if not found:\n')
+                self.backend.write('else:\n')
                 self.backend.indent()
-                self.backend.write('end_loop_shared_vars_res.append([param, [arguments["var_" + str(param)][0]]])\n')
+                self.backend.write('end_loop_shared_vars_res[param] = [arguments["var_" + str(param)][0]]\n')
                 self.backend.dedent()
             
             last_thread_name = thread_name
