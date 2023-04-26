@@ -20,11 +20,11 @@ def end_loops_timer_thread():
             if dgraph_var in shared_vars_count:
                 shared_vars_count[dgraph_var] += per_thread_loop_count[thread]
             else:
-                shared_vars_count[dgraph_var] = [per_thread_loop_count[thread]]
+                shared_vars_count[dgraph_var] = per_thread_loop_count[thread]
     assert(len(shared_vars_count) == len(end_loop_shared_vars_res))
     for i, (key, val) in enumerate(end_loop_shared_vars_res.items()): 
         average = sum(val) / len(val)
-        print(str(key) + ":" + str(shared_vars_count[i][1]-average))
+        print(str(key) + ":" + str(shared_vars_count[key]-average))
     
     
 
@@ -32,19 +32,19 @@ def main():
     arguments = locals()
     loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) 
     loop_stop_thread.start()
+    global mutex_2
+    mutex_2 = threading.Lock()
+    global mutex_3
+    mutex_3 = threading.Lock()
     var_2 = [0, 0]
     var_3 = [0, 0]
     t_5 = Thread(target=thread_5, args=(var_2, var_3,)) 
     t_5.start()
     while not exit_loops:
         per_thread_loop_count[1] += 1
-        global mutex_2
-        mutex_2 = threading.Lock()
         mutex_2.acquire()
         var_2[0] += 1
         mutex_2.release()
-        global mutex_3
-        mutex_3 = threading.Lock()
         mutex_3.acquire()
         var_3[0] += 1
         mutex_3.release()

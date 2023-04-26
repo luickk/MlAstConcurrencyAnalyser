@@ -13,7 +13,7 @@ if __name__ == "__main__":
                                         [5, 6, 3, 3], 
                                         [5, 7, 2, 2]], dtype=int)
 
-    # # #   parent arr, thread id, var id, mutex id
+    # #   parent arr, thread id, var id, mutex id
     # siccl_example_flattened = np.array([[0, 1, 2, 0],
     #                                     [0, 1, 3, 0],
     #                                     [1, 5, 2, 0], 

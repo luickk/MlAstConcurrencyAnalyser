@@ -62,7 +62,7 @@ class SicclGenerator():
         self.backend.dedent()
         self.backend.write('else:\n')
         self.backend.indent()
-        self.backend.write('shared_vars_count[dgraph_var] = [per_thread_loop_count[thread]]\n')
+        self.backend.write('shared_vars_count[dgraph_var] = per_thread_loop_count[thread]\n')
         self.backend.dedent()
         self.backend.dedent()
         self.backend.dedent()
@@ -74,7 +74,7 @@ class SicclGenerator():
         self.backend.write('for i, (key, val) in enumerate(end_loop_shared_vars_res.items()): \n')
         self.backend.indent()
         self.backend.write('average = sum(val) / len(val)\n')
-        self.backend.write('print(str(key) + ":" + str(shared_vars_count[i][1]-average))\n')
+        self.backend.write('print(str(key) + ":" + str(shared_vars_count[key]-average))\n')
         self.backend.dedent()
         self.backend.write('\n')
         
@@ -141,7 +141,6 @@ class SicclGenerator():
                         thread_params = thread_pgraph[thread_name]
                     self.create_thread(thread_name, thread_params);
 
-
                 if thread_name in thread_dgraph:
                     for dependant_thread in thread_dgraph[thread_name]:
                         if dependant_thread in thread_mgraph:
@@ -201,7 +200,7 @@ class SicclGenerator():
             
             last_thread_name = thread_name
     # list threads with its threads (dependencies)
-    def generate_thread_dependency_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+    def generate_thread_dependency_graph(self, siccl_array: np.array) -> dict[int, list[int]]:
         thread_dgraph: dict[int, list[int]] = {}
 
         last_thread_name = 0
@@ -234,7 +233,7 @@ class SicclGenerator():
         return res
 
     # list threads with its parameters (variables required/ share)
-    def generate_thread_params_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+    def generate_thread_params_graph(self, siccl_array: np.array) -> dict[int, list[int]]:
         thread_pgraph: dict[int, list[int]] = {}
         last_thread_name = 0
         for i, elem in enumerate(siccl_array):
@@ -260,20 +259,19 @@ class SicclGenerator():
         return thread_pgraph
 
     # list threads with its mutexe
-    def generate_thread_mutex_graph(self, siccl_array: np.array) -> dict[list[int, list[int]]]:
+    def generate_thread_mutex_graph(self, siccl_array: np.array) -> dict[int, list[int]]:
         thread_mutex_graph: dict[int, list[int]] = {}
         for i, elem in enumerate(siccl_array):
             mutex_name = elem[3]
             var_name = elem[2]
             thread_name = elem[1]
             parent_thread = elem[0]
-            found = False
 
             if parent_thread in thread_mutex_graph:
-                if mutex_name not in thread_mutex_graph[mutex_name] and mutex_name != 0:
-                    thread_mutex_graph[mutex_name].append(mutex_name)
+                if mutex_name != 0 and mutex_name not in thread_mutex_graph[parent_thread]:
+                    thread_mutex_graph[parent_thread].append(mutex_name)
             else:
-                thread_mutex_graph = [mutex_name]
+                thread_mutex_graph[parent_thread] = [mutex_name]
 
         return thread_mutex_graph
 
