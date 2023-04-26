@@ -100,6 +100,11 @@ class SicclGenerator():
         self.end_loops_timer_thread()
         self.backend.write('def main():\n')
         self.backend.indent()
+
+        for elem in siccl_array:
+            if elem[0] == 0 and elem[1] == 1:
+                self.backend.write('var_{0} = [{1}, {2}]\n'.format(elem[2], 0, 0))
+
         self.backend.write('arguments = locals()\n')
         self.backend.write('loop_stop_thread = Thread(target=end_loops_timer_thread, args=()) \n')
         self.backend.write('loop_stop_thread.start()\n')

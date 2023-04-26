@@ -56,9 +56,23 @@ class GenericVisitor(ast.NodeVisitor):
             mutex_id = node.id
         self.vars_fns.append((self.last_declared_fn, node.id, mutex_id))
 
+def remove_non_shared_vars(siccl_array):
+    shared_count: dict[int, int] = {}
 
+    last_thread_name = 0
+    for elem in siccl_array:
+        if elem[2] in shared_count:
+            shared_count[elem[2]] += 1
+        else:
+            shared_count[elem[2]] = 1
+
+        last_thread_name = elem[1]
+
+    for i, elem in enumerate(siccl_array):
+        if shared_count[elem[2]] <= 1:
+            del(siccl_array[i])
+    return siccl_array
 def generate_siccle_arr(vars_fns, fn_fns):
-    print(fn_fns)
     fn_counter = 0
     var_counter = 0
     mutex_counter = 0
@@ -103,4 +117,5 @@ def generate_siccle_arr(vars_fns, fn_fns):
                     mutex_counter += 1
                 
                 siccl_array_tok.append([calling_fn_id, called_fn_id, var_id, mutex_id])
-    return siccl_array_tok
+    siccl_arr = remove_non_shared_vars(siccl_array_tok)
+    return siccl_arr
