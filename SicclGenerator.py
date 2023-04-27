@@ -149,6 +149,7 @@ class SicclGenerator():
                 if thread_name in thread_dgraph:
                     for dependant_thread in thread_dgraph[thread_name]:
                         if dependant_thread in thread_mgraph:
+                            print(thread_mgraph)
                             for next_thread_mutex in thread_mgraph[dependant_thread]:
                                 if next_thread_mutex != 0:
                                     if next_thread_mutex not in self.known_mutexe:

@@ -8,6 +8,7 @@ class GenericVisitor(ast.NodeVisitor):
         self.vars_fns = []
         self.fn_fns = []
         self.mutex_state = {}
+        self.last_mutex = ""
         self.mutex_counter = 0
 
     def visit_Call(self, node):
@@ -16,19 +17,28 @@ class GenericVisitor(ast.NodeVisitor):
             # print("funcname", func_name)
             if isinstance(node.func.value, ast.Name):
                 func_attr = node.func.value.id
-                mutex_id = 0
                 state = 0
                 if func_name == "acquire" or func_name == "release":
-                    if func_name == "acquire": state = 1
+                    if func_name == "acquire": 
+                            state = 1
+                            self.last_mutex = func_attr
+
+                    elif func_name == "release": 
+                            self.last_mutex = ""
                     if func_attr in self.mutex_state:
                         self.mutex_state[func_attr] = state
                     else:
-                        mutex_id = self.mutex_counter
                         self.mutex_state[func_attr] = state
                         self.mutex_counter += 1
                     
         # print(self.mutex_state)
         self.generic_visit(node)
+
+
+    def visit_FunctionDef(self, node):
+        self.last_declared_fn = node.name
+        self.generic_visit(node)
+
 
     def visit_Assign(self, node):
         if isinstance(node.targets[0], ast.Name) and isinstance(node.value, ast.Call):
@@ -39,22 +49,34 @@ class GenericVisitor(ast.NodeVisitor):
                     if len(self.fn_fns) <= 0:
                         self.fn_fns.append(("", self.last_declared_fn))
                     self.fn_fns.append((self.last_declared_fn, fn_arg))
+
+        if isinstance(node.targets[0], ast.Name):
+            print(node.targets[0].id, "---", self.last_mutex)
+
+            if self.last_mutex in self.mutex_state:
+                mutex_state = self.mutex_state[self.last_mutex]
+            else:
+                mutex_state = None
+            mutex_id = 0
+            if mutex_state == 1:
+                mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
+            self.vars_fns.append((self.last_declared_fn, node.targets[0].id, mutex_id))
         self.generic_visit(node)
 
-    def visit_FunctionDef(self, node):
-        self.last_declared_fn = node.name
-        self.generic_visit(node)
+    def visit_AugAssign(self, node):
+        if isinstance(node.target, ast.Subscript):
+            print(node.target.value.id, "---", self.last_mutex)
 
-    def visit_Name(self, node):
-        # print("Variable name:", node.id)
-        if node.id in self.mutex_state:
-            mutex_state = self.mutex_state[node.id]
-        else:
-            mutex_state = None
-        mutex_id = 0
-        if mutex_state == 1:
-            mutex_id = node.id
-        self.vars_fns.append((self.last_declared_fn, node.id, mutex_id))
+            if self.last_mutex in self.mutex_state:
+                mutex_state = self.mutex_state[self.last_mutex]
+            else:
+                mutex_state = None
+            mutex_id = 0
+            if mutex_state == 1:
+                mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
+            self.vars_fns.append((self.last_declared_fn, node.target.value.id, mutex_id))
+
+        self.generic_visit(node)
 
 def remove_non_shared_vars(siccl_array):
     shared_count: dict[int, int] = {}
@@ -64,14 +86,18 @@ def remove_non_shared_vars(siccl_array):
         if elem[2] in shared_count:
             shared_count[elem[2]] += 1
         else:
-            shared_count[elem[2]] = 1
+            shared_count[elem[2]] = 0
 
         last_thread_name = elem[1]
 
+    print(len(siccl_array))
     for i, elem in enumerate(siccl_array):
-        if shared_count[elem[2]] <= 1:
+        if shared_count[elem[2]] <= 5:
             del(siccl_array[i])
+    print(len(siccl_array))
+    # print(shared_count)
     return siccl_array
+
 def generate_siccle_arr(vars_fns, fn_fns):
     fn_counter = 0
     var_counter = 0
