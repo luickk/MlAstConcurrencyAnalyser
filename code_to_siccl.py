@@ -4,7 +4,9 @@ import astunparse
 class GenericVisitor(ast.NodeVisitor):
 
     def __init__(self):
-        self.last_declared_fn = ""
+        self.last_defined_fn = ""
+        self.last_fn_args = []
+        self.global_vars = []
         self.vars_fns = []
         self.fn_fns = []
         self.mutex_state = {}
@@ -20,11 +22,11 @@ class GenericVisitor(ast.NodeVisitor):
                 state = 0
                 if func_name == "acquire" or func_name == "release":
                     if func_name == "acquire": 
-                            state = 1
-                            self.last_mutex = func_attr
+                        state = 1
+                        self.last_mutex = func_attr
 
                     elif func_name == "release": 
-                            self.last_mutex = ""
+                        self.last_mutex = ""
                     if func_attr in self.mutex_state:
                         self.mutex_state[func_attr] = state
                     else:
@@ -36,9 +38,14 @@ class GenericVisitor(ast.NodeVisitor):
 
 
     def visit_FunctionDef(self, node):
-        self.last_declared_fn = node.name
+        self.last_defined_fn = node.name
+        self.last_fn_args = [a.arg for a in node.args.args]
         self.generic_visit(node)
 
+    def visit_Global(self, node):
+        for name in node.names:
+            if name not in self.global_vars:
+                self.global_vars.append(name)
 
     def visit_Assign(self, node):
         if isinstance(node.targets[0], ast.Name) and isinstance(node.value, ast.Call):
@@ -47,55 +54,72 @@ class GenericVisitor(ast.NodeVisitor):
                 if fn_name == "Thread":
                     fn_arg = node.value.keywords[0].value.id
                     if len(self.fn_fns) <= 0:
-                        self.fn_fns.append(("", self.last_declared_fn))
-                    self.fn_fns.append((self.last_declared_fn, fn_arg))
+                        self.fn_fns.append(("", self.last_defined_fn))
+                    self.fn_fns.append((self.last_defined_fn, fn_arg))
 
-        if isinstance(node.targets[0], ast.Name):
-            print(node.targets[0].id, "---", self.last_mutex)
 
-            if self.last_mutex in self.mutex_state:
-                mutex_state = self.mutex_state[self.last_mutex]
-            else:
-                mutex_state = None
-            mutex_id = 0
-            if mutex_state == 1:
-                mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
-            self.vars_fns.append((self.last_declared_fn, node.targets[0].id, mutex_id))
+        for sub_node in ast.walk(node):
+            if isinstance(sub_node, ast.Name):
+                if self.last_mutex in self.mutex_state:
+                    mutex_state = self.mutex_state[self.last_mutex]
+                else:
+                    mutex_state = None
+                mutex_id = 0
+                if mutex_state == 1:
+                    mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
+                # print(self.last_defined_fn, self.last_fn_args)     
+                if sub_node.id in self.global_vars or sub_node.id in self.last_fn_args or self.last_defined_fn == "main":
+                    # print(self.last_defined_fn)
+                    self.vars_fns.append((self.last_defined_fn, sub_node.id, mutex_id))
         self.generic_visit(node)
 
     def visit_AugAssign(self, node):
-        if isinstance(node.target, ast.Subscript):
-            print(node.target.value.id, "---", self.last_mutex)
+        for sub_node in ast.walk(node):
+            if isinstance(sub_node, ast.Name):
 
-            if self.last_mutex in self.mutex_state:
-                mutex_state = self.mutex_state[self.last_mutex]
-            else:
-                mutex_state = None
-            mutex_id = 0
-            if mutex_state == 1:
-                mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
-            self.vars_fns.append((self.last_declared_fn, node.target.value.id, mutex_id))
+                if self.last_mutex in self.mutex_state:
+                    mutex_state = self.mutex_state[self.last_mutex]
+                else:
+                    mutex_state = None
+                mutex_id = 0
+                if mutex_state == 1:
+                    mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
+                # print(self.last_defined_fn, self.last_fn_args)
+                if sub_node.id in self.global_vars or sub_node.id in self.last_fn_args or self.last_defined_fn == "main":
+                    # print(self.last_defined_fn)
+                    self.vars_fns.append((self.last_defined_fn, sub_node.id, mutex_id))
 
         self.generic_visit(node)
 
 def remove_non_shared_vars(siccl_array):
-    shared_count: dict[int, int] = {}
+    shared_count: dict[int, [int, int]] = {}
 
     last_thread_name = 0
-    for elem in siccl_array:
+    for i, elem in enumerate(siccl_array):
         if elem[2] in shared_count:
-            shared_count[elem[2]] += 1
+            if elem[1] != shared_count[elem[2]][0]:
+                shared_count[elem[2]][1] += 1
         else:
-            shared_count[elem[2]] = 0
-
+            shared_count[elem[2]] = [elem[1], 0]
         last_thread_name = elem[1]
 
-    print(len(siccl_array))
     for i, elem in enumerate(siccl_array):
-        if shared_count[elem[2]] <= 5:
+        if shared_count[elem[2]][1] < 1:
             del(siccl_array[i])
-    print(len(siccl_array))
-    # print(shared_count)
+
+    per_thread_count: dict[int, int] = {}
+    last_thread_name = ""
+    for i, elem in enumerate(siccl_array):
+        if last_thread_name != elem[1]:
+            per_thread_count.clear()
+        if elem[1] in per_thread_count:
+            per_thread_count[elem[1]] += 1
+        else:
+            per_thread_count[elem[1]] = 1
+
+        if per_thread_count[elem[1]] > 1:
+            del(siccl_array[i])
+        last_thread_name = elem[1]
     return siccl_array
 
 def generate_siccle_arr(vars_fns, fn_fns):

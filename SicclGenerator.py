@@ -149,7 +149,6 @@ class SicclGenerator():
                 if thread_name in thread_dgraph:
                     for dependant_thread in thread_dgraph[thread_name]:
                         if dependant_thread in thread_mgraph:
-                            print(thread_mgraph)
                             for next_thread_mutex in thread_mgraph[dependant_thread]:
                                 if next_thread_mutex != 0:
                                     if next_thread_mutex not in self.known_mutexe:
@@ -168,7 +167,6 @@ class SicclGenerator():
                                 self.known_vars.append(param)
                         self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
                         self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
-
 
                 self.backend.write('while not exit_loops:\n')
                 self.backend.indent()
@@ -194,7 +192,8 @@ class SicclGenerator():
                 self.backend.write('for key, val in arguments_list: params.append(int(key.split("_")[1]))\n')
                 self.backend.write('for i, param in enumerate(params):\n')
                 self.backend.indent()
-                self.backend.write('found = False\n')
+                self.backend.write('if arguments["var_" + str(param)][0] != 0: \n')
+                self.backend.indent()
                 self.backend.write('if param in end_loop_shared_vars_res:\n'.format(thread_name))
                 self.backend.indent()
                 self.backend.write('end_loop_shared_vars_res[param].append(arguments["var_" + str(param)][0])\n')
@@ -202,6 +201,7 @@ class SicclGenerator():
                 self.backend.write('else:\n')
                 self.backend.indent()
                 self.backend.write('end_loop_shared_vars_res[param] = [arguments["var_" + str(param)][0]]\n')
+                self.backend.dedent()
                 self.backend.dedent()
             
             last_thread_name = thread_name
@@ -273,11 +273,11 @@ class SicclGenerator():
             thread_name = elem[1]
             parent_thread = elem[0]
 
-            if parent_thread in thread_mutex_graph:
-                if mutex_name != 0 and mutex_name not in thread_mutex_graph[parent_thread]:
-                    thread_mutex_graph[parent_thread].append(mutex_name)
+            if thread_name in thread_mutex_graph:
+                if mutex_name != 0 and mutex_name not in thread_mutex_graph[thread_name]:
+                    thread_mutex_graph[thread_name].append(mutex_name)
             else:
-                thread_mutex_graph[parent_thread] = [mutex_name]
+                thread_mutex_graph[thread_name] = [mutex_name]
 
         return thread_mutex_graph
 
