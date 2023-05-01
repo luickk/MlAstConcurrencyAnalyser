@@ -58,25 +58,27 @@ class GenericVisitor(ast.NodeVisitor):
                     self.fn_fns.append((self.last_defined_fn, fn_arg))
 
 
-        for sub_node in ast.walk(node):
-            if isinstance(sub_node, ast.Name):
-                if self.last_mutex in self.mutex_state:
-                    mutex_state = self.mutex_state[self.last_mutex]
-                else:
-                    mutex_state = None
-                mutex_id = 0
-                if mutex_state == 1:
-                    mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
-                # print(self.last_defined_fn, self.last_fn_args)     
-                if sub_node.id in self.global_vars or sub_node.id in self.last_fn_args or self.last_defined_fn == "main":
-                    # print(self.last_defined_fn)
-                    self.vars_fns.append((self.last_defined_fn, sub_node.id, mutex_id))
+        for sub_node_targets in node.targets:
+            for sub_node in ast.walk(sub_node_targets):
+                if isinstance(sub_node, ast.Name):
+                    if self.last_mutex in self.mutex_state:
+                        mutex_state = self.mutex_state[self.last_mutex]
+                    else:
+                        mutex_state = None
+                    mutex_id = 0
+                    if mutex_state == 1:
+                        mutex_id = list(self.mutex_state.keys()).index(self.last_mutex) + 1
+                    # print(self.last_defined_fn, self.last_fn_args)     
+                    if sub_node.id in self.global_vars or sub_node.id in self.last_fn_args or self.last_defined_fn == "main":
+                        # print(self.last_defined_fn)
+                        # print(sub_node.id, node.lineno)
+                        # print(sub_node.id, node.lineno, ast.dump(node))
+                        self.vars_fns.append((self.last_defined_fn, sub_node.id, mutex_id))
         self.generic_visit(node)
 
     def visit_AugAssign(self, node):
-        for sub_node in ast.walk(node):
+        for sub_node in ast.walk(node.target):
             if isinstance(sub_node, ast.Name):
-
                 if self.last_mutex in self.mutex_state:
                     mutex_state = self.mutex_state[self.last_mutex]
                 else:
@@ -87,6 +89,8 @@ class GenericVisitor(ast.NodeVisitor):
                 # print(self.last_defined_fn, self.last_fn_args)
                 if sub_node.id in self.global_vars or sub_node.id in self.last_fn_args or self.last_defined_fn == "main":
                     # print(self.last_defined_fn)
+                    # print(sub_node.id, node.lineno)
+                    # print(sub_node.id, node.lineno, ast.dump(node))
                     self.vars_fns.append((self.last_defined_fn, sub_node.id, mutex_id))
 
         self.generic_visit(node)

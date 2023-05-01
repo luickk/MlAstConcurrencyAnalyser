@@ -67,14 +67,13 @@ class SicclGenerator():
         self.backend.dedent()
         self.backend.dedent()
 
-        # self.backend.write('print(per_thread_loop_count)\n')
-        # self.backend.write('print(shared_vars_count)\n')
-        # self.backend.write('print(end_loop_shared_vars_res)\n')
-        self.backend.write('assert(len(shared_vars_count) == len(end_loop_shared_vars_res))\n')
         self.backend.write('for i, (key, val) in enumerate(end_loop_shared_vars_res.items()): \n')
+        self.backend.indent()
+        self.backend.write('if key in shared_vars_count:\n')
         self.backend.indent()
         self.backend.write('average = sum(val) / len(val)\n')
         self.backend.write('print(str(key) + ":" + str(shared_vars_count[key]-average))\n')
+        self.backend.dedent()
         self.backend.dedent()
         self.backend.write('\n')
         
@@ -117,6 +116,7 @@ class SicclGenerator():
         self.backend.indent()
         self.backend.write('main()\n')
     def create_thread(self, name: string, params: list[int]):
+        params = utils.remove_dup(params)
         self.backend.dedent()
         self.backend.write('\n')
         stringiefied_t_params = params.copy()
@@ -147,6 +147,12 @@ class SicclGenerator():
                     self.create_thread(thread_name, thread_params);
 
                 if thread_name in thread_dgraph:
+                    for curr_thread_mutex in thread_mgraph[thread_name]:
+                        if curr_thread_mutex != 0:
+                            if curr_thread_mutex not in self.known_mutexe:
+                                self.backend.write("global mutex_{0}\n".format(curr_thread_mutex))
+                                self.backend.write("mutex_{0} = threading.Lock()\n".format(curr_thread_mutex))
+                                self.known_mutexe.append(curr_thread_mutex)
                     for dependant_thread in thread_dgraph[thread_name]:
                         if dependant_thread in thread_mgraph:
                             for next_thread_mutex in thread_mgraph[dependant_thread]:
@@ -159,7 +165,7 @@ class SicclGenerator():
                         if dependant_thread in thread_pgraph:
                             thread_params = thread_pgraph[dependant_thread]
                         
-                        stringiefied_t_params = thread_params.copy()
+                        stringiefied_t_params = utils.remove_dup(thread_params)
                         for i, param in enumerate(stringiefied_t_params):
                             stringiefied_t_params[i] =  "var_" + str(param)
                             if param not in self.known_vars:
@@ -234,8 +240,7 @@ class SicclGenerator():
         for i, elem in enumerate(siccl_array):
             # print()
             if elem[1] == thread_name:
-                if elem[2] not in res:
-                    res.append(elem[2])
+                res.append(elem[2])
         return res
 
     # list threads with its parameters (variables required/ share)
@@ -247,21 +252,14 @@ class SicclGenerator():
             thread_name = elem[1]
             parent_thread = elem[0]
             
-            i = 0
-            params = SicclGenerator.get_threads_params(siccl_array, thread_name)
-            # print(params)
-            
             if last_thread_name != thread_name:
+                params = SicclGenerator.get_threads_params(siccl_array, thread_name)
                 thread_pgraph[thread_name] = params
+                
+                # if parent_thread in thread_pgraph:
+                #     thread_pgraph[parent_thread].extend(params)
             last_thread_name = thread_name
-            
-            if parent_thread in thread_pgraph:
-                thread_pgraph[parent_thread].extend(params)
 
-        for node, node_params in thread_pgraph.items():
-            dups_removed = utils.remove_dup(node_params)
-            node_params.clear()
-            node_params.extend(dups_removed)
         return thread_pgraph
 
     # list threads with its mutexe
@@ -289,6 +287,7 @@ class SicclGenerator():
         thread_dgraph = self.generate_thread_dependency_graph(siccl_array)
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array)
         self.thread_pgraph = self.generate_thread_params_graph(siccl_array)
+        print("pgraph: ", self.thread_pgraph)
         self.traverse_tree(True, siccl_array, thread_dgraph, thread_mgraph, self.thread_pgraph)
         self.call_main();
         return self.backend.end()

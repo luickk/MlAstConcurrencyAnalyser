@@ -22,7 +22,8 @@ if __name__ == "__main__":
     #                                     [5, 6, 3, 0], 
     #                                     [5, 7, 2, 0]], dtype=int)
 
-    siccl_example_flattened = np.array([[0, 1, 0, 0], [0, 1, 3, 0], [0, 1, 7, 0], [0, 1, 0, 0], [0, 1, 5, 0], [0, 1, 1, 0], [0, 1, 1, 2], [0, 1, 15, 0], [0, 1, 16, 0], [1, 3, 0, 0], [1, 3, 0, 0], [1, 3, 1, 2], [3, 4, 0, 1], [3, 5, 0, 1]], dtype=int)
+    siccl_example_flattened = np.array([[0, 1, 0, 0], [0, 1, 3, 0], [0, 1, 0, 0], [0, 1, 7, 0], [0, 1, 1, 2], [0, 1, 11, 0], [1, 3, 0, 1], [3, 4, 0, 1], [3, 4, 1, 2], [3, 5, 0, 1]], dtype=int)
+
     gen = SicclGenerator(1)
     text = gen.generate(siccl_example_flattened)
     f = open("generated_siccl_example.py",'w')
