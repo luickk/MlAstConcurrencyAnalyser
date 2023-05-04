@@ -13,7 +13,7 @@ def end_loops_timer_thread():
     globals()["exit_loops"] = True
     time.sleep(0.5)
     shared_vars_count: dict[int, int] = {}
-    thread_pgraph = {0: [0], 1: [0, 1, 0], 3: []}
+    thread_pgraph = {0: [0, 3, 0, 7, 1, 11, 0, 0, 1, 0], 1: [0, 1, 0, 0, 0, 3, 0, 7, 1, 11], 3: [0, 1, 0, 0, 0, 3, 0, 7, 1, 11]}
 
     for thread, params in thread_pgraph.items():
         for dgraph_var in params:
@@ -46,8 +46,29 @@ def main():
     t_4.start()
     t_5 = Thread(target=thread_5, args=(,)) 
     t_5.start()
+    var_0 = [0, 0]
+    var_1 = [0, 0]
+    var_3 = [0, 0]
+    var_7 = [0, 0]
+    var_11 = [0, 0]
+    t_3 = Thread(target=thread_3, args=(var_0, var_1, var_3, var_7, var_11,)) 
+    t_3.start()
+    t_1 = Thread(target=thread_1, args=(var_0, var_1, var_3, var_7, var_11,)) 
+    t_1.start()
     while not exit_loops:
         per_thread_loop_count[1] += 1
+        mutex_3.acquire()
+        var_0[0] += 1
+        mutex_3.release()
+        var_3[0] += 1
+        mutex_3.acquire()
+        var_0[0] += 1
+        mutex_3.release()
+        var_7[0] += 1
+        mutex_2.acquire()
+        var_1[0] += 1
+        mutex_2.release()
+        var_11[0] += 1
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -58,10 +79,21 @@ def main():
             else:
                 end_loop_shared_vars_res[param] = [arguments["var_" + str(param)][0]]
 
-def thread_3():
+def thread_3(var_0, var_1, var_3, var_7, var_11):
     arguments = locals()
+    t_4 = Thread(target=thread_4, args=(,)) 
+    t_4.start()
+    t_5 = Thread(target=thread_5, args=(,)) 
+    t_5.start()
+    t_3 = Thread(target=thread_3, args=(var_0, var_1, var_3, var_7, var_11,)) 
+    t_3.start()
+    t_1 = Thread(target=thread_1, args=(var_0, var_1, var_3, var_7, var_11,)) 
+    t_1.start()
     while not exit_loops:
         per_thread_loop_count[3] += 1
+        mutex_3.acquire()
+        var_0[0] += 1
+        mutex_3.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -76,6 +108,12 @@ def thread_4():
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[4] += 1
+        mutex_3.acquire()
+        var_0[0] += 1
+        mutex_3.release()
+        mutex_2.acquire()
+        var_1[0] += 1
+        mutex_2.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))
@@ -90,6 +128,9 @@ def thread_5():
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[5] += 1
+        mutex_3.acquire()
+        var_0[0] += 1
+        mutex_3.release()
     arguments_list = arguments.items()
     params = []
     for key, val in arguments_list: params.append(int(key.split("_")[1]))

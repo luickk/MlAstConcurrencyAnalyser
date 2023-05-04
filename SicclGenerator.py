@@ -173,7 +173,6 @@ class SicclGenerator():
                             if param not in self.known_vars:
                                 self.backend.write('var_{0} = [{1}, {2}]\n'.format(param, 0, 0))
                                 self.known_vars.append(param)
-                                print("added -> ", param)
                         self.backend.write('t_{0} = Thread(target=thread_{0}, args=({1},)) \n'.format(str(dependant_thread), ", ".join(stringiefied_t_params)))
                         self.backend.write('t_{0}.start()\n'.format(str(dependant_thread)))
 
@@ -234,17 +233,18 @@ class SicclGenerator():
             last_thread_name = thread_name
         return thread_dgraph_tokenized
 
-    def generate_thread_dependency_graph(self, thread_dgraph_comp: dict[int, list[int]], thread_dgraph_tokenized: dict[int, list[int]]) -> dict[int, list[int]]:
-        for thread_name, dependant_threads in thread_dgraph_tokenized.items():
+    def generate_thread_dependency_graph(self, thread_dgraph_comp: dict[int, list[int]], thread_dgraph_tokenized: dict[int, list[int]], next_thread: int) -> dict[int, list[int]]:
+        for next_index, (thread_name, dependant_threads) in enumerate(thread_dgraph_tokenized.items()):
             if thread_name not in thread_dgraph_comp:
                 thread_dgraph_comp[thread_name] = []
-            for i, dt in enumerate(dependant_threads):
-                if dt in thread_dgraph_tokenized:
-                    thread_dgraph_comp[thread_name].extend(dt)
-                    thread_dgraph_tokenized[thread_name].remove(dt)
-                    self.generate_thread_dependency_graph(thread_dgraph_comp, thread_dgraph_tokenized)
-        print(thread_dgraph_comp)
+
+            if next_thread in thread_dgraph_tokenized:
+                for i, dp in enumerate(thread_dgraph_tokenized[next_thread]):
+                    if dp not in thread_dgraph_comp[thread_name]:
+                        thread_dgraph_comp[thread_name].append(dp)
+                    thread_dgraph_comp = self.generate_thread_dependency_graph(thread_dgraph_comp, thread_dgraph_tokenized, dp)
         return thread_dgraph_comp
+
 
     def get_threads_params(siccl_array: np.array, thread_name: int) -> list[int]:        
         res: list[int] = []
@@ -289,7 +289,7 @@ class SicclGenerator():
         # generating the graphs seperately is a (great)bit more inefficient but more readable
         thread_dgraph = {}
         thread_dgraph_tokenized = self.generate_thread_tokenized_graph(siccl_array)
-        self.generate_thread_dependency_graph(thread_dgraph, thread_dgraph_tokenized)
+        self.generate_thread_dependency_graph(thread_dgraph, thread_dgraph_tokenized, 0)
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array, thread_dgraph)
         self.thread_pgraph = self.generate_thread_params_graph(siccl_array, thread_dgraph)
         print("mgraph: ", thread_mgraph)
