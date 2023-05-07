@@ -241,19 +241,17 @@ class SicclGenerator():
 
         return thread_dgraph_tokenized
 
-    def generate_thread_dependency_graph(self, thread_dgraph_comp: list[int], thread_dgraph_tokenized: dict[int, list[int]], to_look_up_thread: int) -> dict[int, list[int]]:
+    def generate_full_thread_dependency_graph(self, thread_dgraph_comp: list[int], thread_dgraph_tokenized: dict[int, list[int]], to_look_up_thread: int) -> dict[int, list[int]]:
         if to_look_up_thread in thread_dgraph_tokenized:
             dependant_threads = thread_dgraph_tokenized[to_look_up_thread]
-            # print(i, thread_name)
             
             for i, dp in enumerate(dependant_threads):
                 if dp not in thread_dgraph_comp:
                     thread_dgraph_comp.append(dp)
-                self.generate_thread_dependency_graph(thread_dgraph_comp, thread_dgraph_tokenized, dp)
-
+                self.generate_full_thread_dependency_graph(thread_dgraph_comp, thread_dgraph_tokenized, dp)
         return thread_dgraph_comp
 
-    def gen_dep_graph(self, siccl_array):
+    def gen_dep_graphs(self, siccl_array):
         thread_dgraph = {}
         thread_dgraph_tokenized = self.generate_thread_tokenized_graph(siccl_array)
         # print("tokenized draph: ", thread_dgraph_tokenized)
@@ -261,7 +259,7 @@ class SicclGenerator():
             tmp_graph = []
             if thread_name not in thread_dgraph:
                 thread_dgraph[thread_name] = []
-            thread_dgraph[thread_name].extend(self.generate_thread_dependency_graph(tmp_graph, thread_dgraph_tokenized, thread_name))
+            thread_dgraph[thread_name].extend(self.generate_full_thread_dependency_graph(tmp_graph, thread_dgraph_tokenized, thread_name))
         return thread_dgraph_tokenized, thread_dgraph
 
     def get_threads_params(siccl_array: np.array, thread_name: int) -> list[int]:        
@@ -285,9 +283,16 @@ class SicclGenerator():
         thread_pgraph: dict[int, list[int]] = {}
         for thread_name, dependant_threads in dependency_graph.items():
             thread_pgraph[thread_name] = []
+            if len(dependant_threads) == 0:
+                params = SicclGenerator.get_threads_params(siccl_array, thread_name)
+                thread_pgraph[thread_name].extend(params)
+            if thread_name not in dependant_threads:
+                dependant_threads.append(thread_name)
             for dt in dependant_threads:
                 params = SicclGenerator.get_threads_params(siccl_array, dt)
                 thread_pgraph[thread_name].extend(params)
+
+            thread_pgraph[thread_name] = np.unique(thread_pgraph[thread_name]).tolist()
         return thread_pgraph
 
     # list threads with its mutexe
@@ -304,14 +309,13 @@ class SicclGenerator():
     def generate(self, siccl_array: list) -> string:
         self.backend.reset()
         self.reset()
-        thread_dgraph, thread_dgraph_full = self.gen_dep_graph(siccl_array)
+        thread_dgraph, thread_dgraph_full = self.gen_dep_graphs(siccl_array)
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array, thread_dgraph)
         self.thread_pgraph = self.generate_thread_params_graph(siccl_array, thread_dgraph_full)
         print("dgrpah:", thread_dgraph)
         print("dgrpah full:", thread_dgraph_full)
         print("mgraph: ", thread_mgraph)
         print("pgraph: ", self.thread_pgraph)
-        print("dgraph: ", thread_dgraph)
         self.traverse_tree(True, siccl_array, thread_dgraph, thread_dgraph_full, thread_mgraph, self.thread_pgraph)
         self.call_main();
         return self.backend.end()

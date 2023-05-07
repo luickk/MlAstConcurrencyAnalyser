@@ -13,7 +13,7 @@ def end_loops_timer_thread():
     globals()["exit_loops"] = True
     time.sleep(0.5)
     shared_vars_count: dict[int, int] = {}
-    thread_pgraph = {0: [2, 3, 2, 3, 2, 3, 2], 1: [2, 3, 2, 3, 2], 5: [2, 3, 2], 6: [], 7: []}
+    thread_pgraph = {0: [2, 3], 1: [2, 3], 5: [2, 3], 6: [2, 3], 7: [2]}
 
     for thread, params in thread_pgraph.items():
         for dgraph_var in params:
@@ -62,9 +62,9 @@ def main():
 
 def thread_5(var_2, var_3):
     arguments = locals()
-    t_6 = Thread(target=thread_6, args=(,)) 
+    t_6 = Thread(target=thread_6, args=(var_2, var_3,)) 
     t_6.start()
-    t_7 = Thread(target=thread_7, args=(,)) 
+    t_7 = Thread(target=thread_7, args=(var_2,)) 
     t_7.start()
     while not exit_loops:
         per_thread_loop_count[5] += 1
@@ -84,7 +84,7 @@ def thread_5(var_2, var_3):
             else:
                 end_loop_shared_vars_res[param] = [arguments["var_" + str(param)][0]]
 
-def thread_6():
+def thread_6(var_2, var_3):
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[6] += 1
@@ -104,7 +104,7 @@ def thread_6():
             else:
                 end_loop_shared_vars_res[param] = [arguments["var_" + str(param)][0]]
 
-def thread_7():
+def thread_7(var_2):
     arguments = locals()
     while not exit_loops:
         per_thread_loop_count[7] += 1
