@@ -52,7 +52,7 @@ class SicclGenerator():
         self.backend.write('time.sleep(0.5)\n')
 
         self.backend.write('shared_vars_count: dict[int, int] = {}\n')
-        stringified_thread_dgraph = utils.print_to_string(self.thread_pgraph)
+        stringified_thread_dgraph = utils.print_to_string(self.thread_pgraph_flat)
         self.backend.write('thread_pgraph = {0}\n'.format(stringified_thread_dgraph))
         self.backend.write('for thread, params in thread_pgraph.items():\n')
         self.backend.indent()
@@ -282,6 +282,7 @@ class SicclGenerator():
     def generate_thread_params_graph(self, siccl_array: np.array, dependency_graph: dict[int, list[int]]) -> dict[int, list[int]]:
         thread_pgraph: dict[int, list[int]] = {}
         for thread_name, dependant_threads in dependency_graph.items():
+            dependant_threads = dependant_threads.copy()
             thread_pgraph[thread_name] = []
             if len(dependant_threads) == 0:
                 params = SicclGenerator.get_threads_params(siccl_array, thread_name)
@@ -292,7 +293,6 @@ class SicclGenerator():
                 params = SicclGenerator.get_threads_params(siccl_array, dt)
                 thread_pgraph[thread_name].extend(params)
 
-            thread_pgraph[thread_name] = np.unique(thread_pgraph[thread_name]).tolist()
         return thread_pgraph
 
     # list threads with its mutexe
@@ -312,10 +312,12 @@ class SicclGenerator():
         thread_dgraph, thread_dgraph_full = self.gen_dep_graphs(siccl_array)
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array, thread_dgraph)
         self.thread_pgraph = self.generate_thread_params_graph(siccl_array, thread_dgraph_full)
+        self.thread_pgraph_flat = self.generate_thread_params_graph(siccl_array, thread_dgraph)
         print("dgrpah:", thread_dgraph)
         print("dgrpah full:", thread_dgraph_full)
         print("mgraph: ", thread_mgraph)
-        print("pgraph: ", self.thread_pgraph)
+        print("pgraph: ", self.thread_pgraph_flat)
+        print("pgraph full: ", self.thread_pgraph)
         self.traverse_tree(True, siccl_array, thread_dgraph, thread_dgraph_full, thread_mgraph, self.thread_pgraph)
         self.call_main();
         return self.backend.end()
