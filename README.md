@@ -75,11 +75,7 @@ Since it's difficult to generate a dataset, a reinforcement learning approach is
 
 Since generating python code is simply too complex for a simple reinforcement learning model, I created SICCL(Simple Initial Concurrency Configuration Language -> see below), which acts as an abstraction layer to the reinforcement learning model. Since finding a proper policy function for a "language" is difficult, I will be using a [model free approach](https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)).
 
-The basic values the model will optimize for are size (len of the SICCL script) and validity. Crashes or bad static scans (for example through valgrind) will result in bad scores...
-
-## Code Generation
-
-The GAN generates SICCL (see below) which is then turned into python code, run and tested on potential concurrency issues. Whether there was an issue and all kinds of runtime information is then passed to the GAN to optimize on.
+The basic values the model will optimize for are, size (length of the SICCL script), and validity. The generated SICCL is then run and a score for missed non atomic operations is generated which directly correlates with how concurrency hardened the SICCL (and with that the program it was generated from) is.
 
 ## Concurrency issue detection
 
@@ -88,6 +84,9 @@ Concurrency issue detection can be a very complex endeavor but since we don't ne
 The from the SICCL script generated python script includes the calculation of the indicator(the delta of all threads(loops) in which the variable is increased by one, and the actual value of the variable).
 If there is not enough mutexe, the add operation might not be applied on the variable, which does not get increased as a result. The greater the difference of the value, the variable should have had(the sum of all the loops it's referenced in) and the actual value, the more collisions were happening.
 That does not compensate for potential data races, but that can be added later.
+SICCL generation goes both ways, so new SICCL scripts can be generated from existing python code (through ast analysis), and used as training data.
+
+The biggest challange will be to make the SICCL script as detailed and simple as possible, to maintain all of the necessary concurrency complexity from the python code, and keep out the rest.
 
 ### Detection results
 

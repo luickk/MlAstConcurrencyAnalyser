@@ -8,7 +8,7 @@ from code_to_siccl import generate_siccle_arr
 
 
 if __name__ == "__main__":
-    example_code = open("generated_siccl_example.py", "r")
+    example_code = open("test_programs/simple_webserver.py", "r")
     tree = ast.parse(example_code.read())
 
     visitor = GenericVisitor()
