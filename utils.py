@@ -28,6 +28,17 @@ def remove_dup(input: list[int]) -> list[int]:
           res.append(elem)
     return res
 
+
+# very slow
+def count_unique(input: list[int]) -> int:
+    res: list[int] = []
+    n_unique = 0
+    for elem in input:
+       if elem not in res:
+          n_unique += 1
+          res.append(elem)
+    return n_unique
+
 def index_multi_dim_multi_axis_list(to_scan_list: list, index: list, value_to_set = None) -> any:
     next_dim_list = to_scan_list
     for elem in index:

@@ -3,17 +3,13 @@ import ast
 import astunparse
 import sys
 sys.path.append("..") 
-from code_to_siccl import GenericVisitor
-from code_to_siccl import generate_siccle_arr
+from CodeToSicclConverter import CodeToSicclConverter
 
 
 if __name__ == "__main__":
-    example_code = open("test_programs/simple_webserver.py", "r")
-    tree = ast.parse(example_code.read())
+    example_code = open("test_programs/simple_webserver.py", "r").read()
 
-    visitor = GenericVisitor()
-    visitor.visit(tree)
-
-    tokenized_siccl = generate_siccle_arr(visitor.vars_fns, visitor.fn_fns)
-
-    print(tokenized_siccl)
+    # print(example_code)
+    converter = CodeToSicclConverter()
+    siccl = converter.convert(example_code)
+    print(siccl)

@@ -26,7 +26,7 @@ class CodeGeneratorBackend:
             return
         self.level = self.level - 1
 
-class SicclGenerator():
+class SicclToCodeGenerator():
     def __init__(self, siccl_config_test_time: int):
         self.backend: CodeGeneratorBackend = CodeGeneratorBackend()
         self.known_vars: list[int] = []
@@ -92,15 +92,15 @@ class SicclGenerator():
         self.backend.write("end_loop_shared_vars_res: dict[int, list[int]] = {}\n")
         highest_thread_id = 0
         for elem in siccl_array:
-            if elem[1] > highest_thread_id:
-                highest_thread_id = elem[1]
+            if elem[0] > highest_thread_id:
+                highest_thread_id = elem[0]
         self.backend.write("per_thread_loop_count = [0]*{0}\n".format(highest_thread_id+1))
         self.end_loops_timer_thread()
         self.backend.write('def main():\n')
         self.backend.indent()
 
         for elem in siccl_array:
-            if elem[0] == 0 and elem[1] == 1:
+            if elem[1] == 0 and elem[0] == 1:
                 self.backend.write('var_{0} = [{1}, {2}]\n'.format(elem[2], 0, 0))
 
         self.backend.write('arguments = locals()\n')
@@ -128,11 +128,11 @@ class SicclGenerator():
     def traverse_tree(self, root_call: bool, siccl_array: np.array, thread_dgraph: dict[list[int, list[int]]], thread_dgraph_recursive: dict[list[int, list[int]]], thread_mgraph: dict[list[int, list[int]]], thread_pgraph: dict[tuple[int, list[int]]]) -> None:
         inited_mutexe: list[int] = []
         last_thread_name = 0
-        for i_siccl_arr, var in enumerate(siccl_array):
-            mutex_name = var[3]
-            var_name = var[2]
-            thread_name = var[1]
-            parent_thread = var[0]
+        for i_siccl_arr, elem in enumerate(siccl_array):
+            mutex_name = elem[3]
+            var_name = elem[2]
+            thread_name = elem[0]
+            parent_thread = elem[1]
             # new thread
             if last_thread_name != thread_name:
                 self.backend.dedent()
@@ -190,7 +190,7 @@ class SicclGenerator():
 
                 if mutex_name != 0:
                     self.backend.write("mutex_{0}.release()\n".format(mutex_name))
-            if i_siccl_arr < len(siccl_array)-1 and siccl_array[i_siccl_arr+1][1] != thread_name or i_siccl_arr == len(siccl_array)-1:
+            if i_siccl_arr < len(siccl_array)-1 and siccl_array[i_siccl_arr+1][0] != thread_name or i_siccl_arr == len(siccl_array)-1:
                 self.backend.dedent()
                 self.backend.write('arguments_list = arguments.items()\n')
                 self.backend.write('params = []\n')
@@ -217,8 +217,8 @@ class SicclGenerator():
         last_thread_name = 0
         for i, elem in enumerate(siccl_array):
             var_name = elem[2]
-            thread_name = elem[1]
-            parent_thread = elem[0]
+            thread_name = elem[0]
+            parent_thread = elem[1]
 
             if last_thread_name != thread_name:
                 if parent_thread in thread_dgraph_tokenized:
@@ -231,8 +231,8 @@ class SicclGenerator():
 
         for i, elem in enumerate(siccl_array):
             var_name = elem[2]
-            thread_name = elem[1]
-            parent_thread = elem[0]
+            thread_name = elem[0]
+            parent_thread = elem[1]
             if thread_name not in thread_dgraph_tokenized:
                 thread_dgraph_tokenized[thread_name] = []
 
@@ -263,7 +263,7 @@ class SicclGenerator():
         res: list[int] = []
         for i, elem in enumerate(siccl_array):
             # print()
-            if elem[1] == thread_name:
+            if elem[0] == thread_name:
                 res.append(elem[2])
         return res
 
@@ -271,7 +271,7 @@ class SicclGenerator():
         res: list[int] = []
         for i, elem in enumerate(siccl_array):
             # print()
-            if elem[1] == thread_name:
+            if elem[0] == thread_name:
                 res.append(elem[3])
         return res
 
@@ -282,12 +282,12 @@ class SicclGenerator():
             dependant_threads = dependant_threads.copy()
             thread_pgraph[thread_name] = []
             if len(dependant_threads) == 0:
-                params = SicclGenerator.get_threads_params(siccl_array, thread_name)
+                params = SicclToCodeGenerator.get_threads_params(siccl_array, thread_name)
                 thread_pgraph[thread_name].extend(params)
             if thread_name not in dependant_threads:
                 dependant_threads.append(thread_name)
             for dt in dependant_threads:
-                params = SicclGenerator.get_threads_params(siccl_array, dt)
+                params = SicclToCodeGenerator.get_threads_params(siccl_array, dt)
                 thread_pgraph[thread_name].extend(params)
 
         return thread_pgraph
@@ -297,7 +297,7 @@ class SicclGenerator():
         for thread_name, dependant_threads in dependency_graph.items():
             if thread_name not in thread_pgraph:
                 thread_pgraph[thread_name] = []
-            params = SicclGenerator.get_threads_params(siccl_array, thread_name)
+            params = SicclToCodeGenerator.get_threads_params(siccl_array, thread_name)
             thread_pgraph[thread_name].extend(params)
         return thread_pgraph
 
@@ -307,7 +307,7 @@ class SicclGenerator():
         for thread_name, dependant_threads in dependency_graph.items():
             thread_mutex_graph[thread_name] = []
             for dt in dependant_threads:
-                mutexe = SicclGenerator.get_threads_mutexe(siccl_array, dt)
+                mutexe = SicclToCodeGenerator.get_threads_mutexe(siccl_array, dt)
                 thread_mutex_graph[thread_name].extend(mutexe)
         return thread_mutex_graph
 

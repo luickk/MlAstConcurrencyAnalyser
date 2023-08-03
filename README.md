@@ -4,13 +4,20 @@ The basic idea is to train a ML model, in an unsupervised self-testing environme
 
 Note: Throwing Ml against NP complete problems is nothing new, in this case it's especially difficult because tripping a certain kind of concurrency issues can take a long time, which is suboptimal for Ml training.
 
+## Abstract Flow of operations
+
+The data on which the model gets trained is simple python code that is encoded as SICCL which is a graph that contains all information (mutex/ var/ thread ids) which contains all abstract relative information required to detect a possible race condition. The model's output is an action with which it can change mutex id's with the SICCL graph so that possible race conditions get fixed.
+After every iteration, the SICCL graph is converted to python code and executed. The generated python code includes a loop for every thread, which increases every variable by one. That way, since array variables are not atomic, if the accumulated loop count of all threads in which a variable is present, does not equal its own value, we know that there is a possible concurrency issue.
+That way of measuring works great and since the deviation isn't binary but very scalar it's a great learning basis for the model.
+
 # Todo
 
-- [x] Approximating feasibility of the project
+- [x] 1. Approximating feasibility of the project
     - Creating an abstract formal language describing different concurrency configurations(from which a python program is generated) seems to be possible
     - Building a graph from compile and runtime data is possible and has been done by thread/ mem sanitizers (as real model input samples)
-- [x] Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
-- [x] Putting it all together....
+- [x] 2. Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
+- [x] 3. Putting it all together
+- [] 4. Finding the necessary complexity of SICCL such that it is complex enough to resemble most code converted, but not too complex that it would overwhelm the model.
 
 ## Log Book
 
@@ -21,26 +28,26 @@ This commit contains the first working version of the project. The network manag
 Initial SICCL matrix:
 
 ```
-# parent arr, thread name, var name, mutex name
-siccl_example_flattened = np.array([[0, 1, 2, 0],
-                                    [0, 1, 3, 0],
-                                    [1, 5, 2, 0], 
-                                    [1, 5, 3, 0], 
-                                    [5, 6, 2, 0], 
-                                    [5, 6, 3, 0], 
-                                    [5, 7, 2, 0]], dtype=int)
+# thread name, parent arr, var name, mutex name
+siccl_example_flattened = np.array([[1, 0, 2, 0],
+                                    [1, 0, 3, 0],
+                                    [5, 1, 2, 0], 
+                                    [5, 1, 3, 0], 
+                                    [6, 5, 2, 0], 
+                                    [6, 5, 3, 0], 
+                                    [7, 5, 2, 0]], dtype=int)
 ```
 
 After 10 iterations:
 
 ```
-[[0 1 2 0]
- [0 1 3 9]
- [1 5 2 0]
- [1 5 3 1]
- [5 6 2 1]
- [5 6 3 1]
- [5 7 2 0]]
+[[1 0 2 0]
+ [1 0 3 9]
+ [5 1 2 0]
+ [5 1 3 1]
+ [6 5 2 1]
+ [6 5 3 1]
+ [7 5 2 0]]
 ```
 Missing non atomic operations:  
 - 3: 1567951.0
@@ -51,13 +58,13 @@ Missing non atomic operations:
 
 After 200 iterations
 ```
-[[0 1 2 0]
- [0 1 3 1]
- [1 5 2 0]
- [1 5 3 1]
- [5 6 2 1]
- [5 6 3 1]
- [5 7 2 0]]
+[[1 0 2 0]
+ [1 0 3 1]
+ [5 1 2 0]
+ [5 1 3 1]
+ [6 5 2 1]
+ [6 5 3 1]
+ [7 5 2 0]]
 2: 250748.0
 3:  0.5
 ```
@@ -96,13 +103,13 @@ This very simple indicator works great with a very low error rate compared to it
     Script:
     ```python
     #   parent arr, thread id, var id, mutex id
-    siccl_example_flattened = np.array([[0, 1, 2, 2],
-                                        [0, 1, 3, 3],
-                                        [1, 5, 2, 2], 
-                                        [1, 5, 3, 3], 
-                                        [5, 6, 2, 2], 
-                                        [5, 6, 3, 3], 
-                                        [5, 7, 2, 2]], dtype=int) 
+    siccl_example_flattened = np.array([[1, 0, 2, 2],
+                                        [1, 0, 3, 3],
+                                        [5, 1, 2, 2], 
+                                        [5, 1, 3, 3], 
+                                        [6, 5, 2, 2], 
+                                        [6, 5, 3, 3], 
+                                        [7, 5, 2, 2]], dtype=int) 
     ```
     Results:
     ```
@@ -115,13 +122,13 @@ This very simple indicator works great with a very low error rate compared to it
     Script:
     ```python
     #   parent arr, thread id, var id, mutex id
-    siccl_example_flattened = np.array([[0, 1, 2, 0],
-                                        [0, 1, 3, 0],
-                                        [1, 5, 2, 0], 
-                                        [1, 5, 3, 0], 
-                                        [5, 6, 2, 0], 
-                                        [5, 6, 3, 0], 
-                                        [5, 7, 2, 0]], dtype=int) 
+    siccl_example_flattened = np.array([[1, 0, 2, 0],
+                                        [1, 0, 3, 0],
+                                        [5, 1, 2, 0], 
+                                        [5, 1, 3, 0], 
+                                        [6, 5, 2, 0], 
+                                        [6, 5, 3, 0], 
+                                        [7, 5, 2, 0]], dtype=int) 
     ```
     Results:
     ```

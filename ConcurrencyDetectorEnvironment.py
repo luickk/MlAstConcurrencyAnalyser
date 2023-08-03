@@ -1,4 +1,4 @@
-from SicclGenerator import SicclGenerator
+from SicclToCodeGenerator import SicclToCodeGenerator
 import itertools
 import numpy as np
 import os
@@ -24,18 +24,19 @@ class ConcurrencyDetectorEnvironment:
 		self.reset_env = siccl_arr
 		self.siccl_arr = siccl_arr
 		self.n_action = 1
-		self.gen: SicclGenerator= SicclGenerator(siccl_config_test_time)
+		self.gen: SicclToCodeGenerator= SicclToCodeGenerator(siccl_config_test_time)
 		self.res_text: list[str] = []
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
+		self.last_reward = 0
 
 	# action tuple: index, mutex id
 	def step(self, action: (int, int)):
 		index = action[0]
 		mutex_name = self.siccl_arr[index][3]
 		var_name = self.siccl_arr[index][2]
-		thread_name = self.siccl_arr[index][1]
-		parent_thread = self.siccl_arr[index][0]
+		parent_thread = self.siccl_arr[index][1]
+		thread_name = self.siccl_arr[index][0]
 		# add mutex
 		# if action[0] == 1:
 		self.siccl_arr[index][3] = str(action[1])
@@ -63,8 +64,13 @@ class ConcurrencyDetectorEnvironment:
 		else:
 			print("crahs!?: ", err_outp)
 			reward = 6000000
-		reward = 1 - utils.map_value(reward, -40, 6000000, 0, 1)
-		print(reward)
+		reward = 1 - utils.map_value(reward, 0, 3, 0, 1)
+		print("absoult: " + str(reward))
+		reward = reward - self.last_reward
+		if reward < 0: reward = 0
+		print(str(reward) + "-" + str(self.last_reward))
+		print("reward: " + str(reward))
+		self.last_reward = reward
 		# state, reward, done
 		return self.siccl_arr, reward, False
 

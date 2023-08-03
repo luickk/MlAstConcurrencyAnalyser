@@ -5,22 +5,42 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
-from concurrency_detector_env import ConcurrencyDetectorEnvironment
+from ConcurrencyDetectorEnvironment import ConcurrencyDetectorEnvironment
 
 n_max_mutex = 100
 num_hidden = 128
 
 num_actions = 2
-# parent arr, thread name, var name, mutex name
-siccl_example_flattened = np.array([[0, 1, 2, 0],
-                                    [0, 1, 3, 0],
-                                    [1, 5, 2, 0], 
-                                    [1, 5, 3, 0], 
-                                    [5, 6, 2, 0], 
-                                    [5, 6, 3, 0], 
-                                    [5, 7, 2, 0]], dtype=int)
+# thread name, parent arr, var name, mutex name
+# siccl_example_flattened = np.array([[0, 1, 2, 0],
+#                                     [0, 1, 3, 0],
+#                                     [1, 5, 2, 0], 
+#                                     [1, 5, 3, 0], 
+#                                     [5, 6, 2, 0], 
+#                                     [5, 6, 3, 0], 
+#                                     [5, 7, 2, 0]], dtype=int)
+siccl_example_flattened = np.array([[1, 0, 3, 0],
+                                    [2, 1, 2, 0],
+                                    [2, 1, 0, 0],
+                                    [3, 2, 1, 0],
+                                    [4, 3, 0, 0],
+                                    [4, 3, 4, 0],
+                                    [4, 3, 4, 0],
+                                    [4, 3, 2, 0],
+                                    [4, 3, 2, 0],
+                                    [5, 4, 0, 0],
+                                    [6, 5, 0, 0],
+                                    [6, 5, 1, 0],
+                                    [6, 5, 5, 0],
+                                    [6, 5, 5, 0],
+                                    [6, 5, 1, 0],
+                                    [7, 6, 2, 0],
+                                    [8, 7, 3, 0],
+                                    [8, 7, 0, 0],
+                                    [8, 7, 5, 0],
+                                    [8, 7, 0, 0]], dtype=int)
 n_indices = len(siccl_example_flattened)
-n_mutexe = 10
+n_mutexe = utils.count_unique(siccl_example_flattened[:, 2]) + 1 # 1 is for 0, so no mutex
 gamma = 0.99  # Discount factor for past rewards
 max_steps_per_episode = 10
 
@@ -28,7 +48,7 @@ max_steps_per_episode = 10
 env = ConcurrencyDetectorEnvironment(siccl_example_flattened, 1)
 eps = np.finfo(np.float32).eps.item()  # Smallest number such that 1.0 + eps != 1.0
 
-inputs = layers.Input(shape=(28,))
+inputs = layers.Input(shape=(n_indices * 4,))
 common = layers.Dense(num_hidden, activation="relu")(inputs)
 
 # action = layers.Dense(num_actions, activation="softmax")(common)
@@ -84,8 +104,8 @@ while True:  # Run until solved
             rewards_history.append(reward)
             episode_reward += reward
             
-            print((index, mutex_id))
-            print(env.siccl_arr)
+            print("action: " + str((index, mutex_id)))
+            print("siccl arr: " + str(env.siccl_arr))
             if done:
                 break
 
