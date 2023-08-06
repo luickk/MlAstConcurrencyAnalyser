@@ -18,6 +18,7 @@ That way of measuring works great and since the deviation isn't binary but very 
 - [x] 2. Writing a simulation environment that generates a concurrent program from an SICCL like abstraction
 - [x] 3. Putting it all together
 - [] 4. Finding the necessary complexity of SICCL such that it is complex enough to resemble most code converted, but not too complex that it would overwhelm the model.
+- [] 5. add runtime data as training input i.e. resolve and abstract crash data and stack traces.
 
 ## Log Book
 
@@ -83,6 +84,10 @@ Since it's difficult to generate a dataset, a reinforcement learning approach is
 Since generating python code is simply too complex for a simple reinforcement learning model, I created SICCL(Simple Initial Concurrency Configuration Language -> see below), which acts as an abstraction layer to the reinforcement learning model. Since finding a proper policy function for a "language" is difficult, I will be using a [model free approach](https://en.wikipedia.org/wiki/Model-free_(reinforcement_learning)).
 
 The basic values the model will optimize for are, size (length of the SICCL script), and validity. The generated SICCL is then run and a score for missed non atomic operations is generated which directly correlates with how concurrency hardened the SICCL (and with that the program it was generated from) is.
+
+## Alternatives to Reinforcement learning
+
+[This](https://cs229.stanford.edu/proj2016/report/ChenYingLaird-DeepQLearningWithRecurrentNeuralNetwords-report.pdf) paper on patterns in long term data where the dependencies of the data nodes are far apart is really interesting. The problem with the reinforcement actor-critic model is that the data is really complex, with many data node dependencies/ patterns that may only reveal themselves after many iterations.
 
 ## Concurrency issue detection
 

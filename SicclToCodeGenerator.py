@@ -146,20 +146,14 @@ class SicclToCodeGenerator():
                     self.create_thread(thread_name, thread_params);
 
                 if thread_name in thread_dgraph:
-                    for curr_thread_mutex in thread_mgraph[thread_name]:
-                        if curr_thread_mutex != 0:
-                            if curr_thread_mutex not in self.known_mutexe:
-                                self.backend.write("global mutex_{0}\n".format(curr_thread_mutex))
-                                self.backend.write("mutex_{0} = threading.Lock()\n".format(curr_thread_mutex))
-                                self.known_mutexe.append(curr_thread_mutex)
+                    for mgraph_index in thread_mgraph:
+                        for curr_thread_mutex in thread_mgraph[mgraph_index]:
+                            if curr_thread_mutex != 0:
+                                if curr_thread_mutex not in self.known_mutexe:
+                                    self.backend.write("global mutex_{0}\n".format(curr_thread_mutex))
+                                    self.backend.write("mutex_{0} = threading.Lock()\n".format(curr_thread_mutex))
+                                    self.known_mutexe.append(curr_thread_mutex)
                     for dependant_thread in thread_dgraph[thread_name]:
-                        if dependant_thread in thread_mgraph:
-                            for next_thread_mutex in thread_mgraph[dependant_thread]:
-                                if next_thread_mutex != 0:
-                                    if next_thread_mutex not in self.known_mutexe:
-                                        self.backend.write("global mutex_{0}\n".format(next_thread_mutex))
-                                        self.backend.write("mutex_{0} = threading.Lock()\n".format(next_thread_mutex))
-                                        self.known_mutexe.append(next_thread_mutex)
                         thread_params: list[int] = []
                         if dependant_thread in thread_pgraph:
                             thread_params = thread_pgraph[dependant_thread]
@@ -180,10 +174,6 @@ class SicclToCodeGenerator():
             # self.backend.write('print("?")\n')
             if var_name in self.known_vars:
                 if mutex_name != 0:
-                    if mutex_name not in self.known_mutexe:
-                        self.backend.write("global mutex_{0}\n".format(mutex_name))
-                        self.backend.write("mutex_{0} = threading.Lock()\n".format(mutex_name))
-                        self.known_mutexe.append(mutex_name)
                     self.backend.write("mutex_{0}.acquire()\n".format(mutex_name))
 
                 self.backend.write('var_{0}[0] += 1\n'.format(var_name))
@@ -319,11 +309,11 @@ class SicclToCodeGenerator():
         thread_mgraph = self.generate_thread_mutex_graph(siccl_array, thread_dgraph)
         self.thread_pgraph = self.generate_thread_params_graph_recursive(siccl_array, thread_dgraph_recursive)
         self.thread_pgraph_flat = self.generate_thread_params_graph(siccl_array, thread_dgraph)
-        print("dgrpah:", thread_dgraph)
-        print("dgrpah recursive:", thread_dgraph_recursive)
-        print("mgraph: ", thread_mgraph)
-        print("pgraph: ", self.thread_pgraph_flat)
-        print("pgraph recursive: ", self.thread_pgraph)
+        # print("dgrpah:", thread_dgraph)
+        # print("dgrpah recursive:", thread_dgraph_recursive)
+        # print("mgraph: ", thread_mgraph)
+        # print("pgraph: ", self.thread_pgraph_flat)
+        # print("pgraph recursive: ", self.thread_pgraph)
         self.traverse_tree(True, siccl_array, thread_dgraph, thread_dgraph_recursive, thread_mgraph, self.thread_pgraph)
         self.call_main();
         return self.backend.end()

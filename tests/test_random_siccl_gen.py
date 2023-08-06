@@ -4,9 +4,7 @@ sys.path.append("..")
 from RandomSicclGenerator import RandomSicclGenerator
 
 if __name__ == "__main__":
-    
-    gen = RandomSicclGenerator(20, 5)
+    gen = RandomSicclGenerator(200, 10)
 
     siccl = gen.generate()
-    print(siccl)
-    
+    print(repr(siccl))

@@ -20,7 +20,7 @@ def stdoutIO(stdout=None):
     sys.stdout = old
 
 class ConcurrencyDetectorEnvironment:
-	def __init__(self, siccl_arr: np.array, siccl_config_test_time: int):
+	def __init__(self, siccl_arr: np.array, siccl_config_test_time: int, min_atomic_err: int):
 		self.reset_env = siccl_arr
 		self.siccl_arr = siccl_arr
 		self.n_action = 1
@@ -29,6 +29,9 @@ class ConcurrencyDetectorEnvironment:
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
 		self.last_reward = 0
+		self.step_count = 0
+		self.min_atomic_err = min_atomic_err
+		self.max_atomic_error_rate = 0
 
 	# action tuple: index, mutex id
 	def step(self, action: (int, int)):
@@ -45,7 +48,7 @@ class ConcurrencyDetectorEnvironment:
 		# 	self.siccl_arr[index][3] = 0
 
 		self.res_text = self.gen.generate(self.siccl_arr)
-
+		# print(self.res_text)
 		reward = 0
 		# print(self.res_text)
 
@@ -62,17 +65,28 @@ class ConcurrencyDetectorEnvironment:
 					print("+ ", float(split_res[1]))
 					reward += float(split_res[1])
 		else:
-			print("crahs!?: ", err_outp)
-			reward = 6000000
-		reward = 1 - utils.map_value(reward, 0, 3, 0, 1)
-		print("absoult: " + str(reward))
+			print("crash!?: ", err_outp)
+			reward = self.max_atomic_error_rate
+		print("----- step: " + str(self.step_count) +  " -------")
+		print("absoulte: " + str(reward))
+		absolute_atomic_err_rate = reward
+		if reward > self.max_atomic_error_rate: self.max_atomic_error_rate = reward
+		reward = 1 - utils.map_value(reward, self.min_atomic_err, self.max_atomic_error_rate, 0, 1)
+		print("(1)substraceted,mapped absoulte(mapping from " + str(self.min_atomic_err) + " to " + str(self.max_atomic_error_rate) + "): " + str(reward))
+		# classifier
 		reward = reward - self.last_reward
 		if reward < 0: reward = 0
-		print(str(reward) + "-" + str(self.last_reward))
-		print("reward: " + str(reward))
+		# binary classifier
+		# if reward > 0.3: 
+		# 	reward = 1 
+		# else: 
+		# 	reward = 0		
+		print("final reward: " + str(reward))
+		print("----------")
 		self.last_reward = reward
+		self.step_count += 1
 		# state, reward, done
-		return self.siccl_arr, reward, False
+		return self.siccl_arr, reward, absolute_atomic_err_rate, False
 
 		
 

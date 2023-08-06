@@ -32,17 +32,15 @@ class RandomSicclGenerator:
             for i, elem in enumerate(column):
                 column[i] = random.randint(1, self.n_vars)
 
+
+        if self.curr_column == 3:
+            for i, elem in enumerate(column):
+                column[i] = 0
+
         self.curr_column += 1
         return column
 
     def generate(self):
         res = np.apply_along_axis(self.apply_on_column, axis=0, arr=self.generated_siccl_arr)
-        print(res)
-
-        # for x in empty_arr:
-        #     print(x)
-        # arr = list(range(1, maxval+1))
-        # print(arr)
-        # res = np.repeat(arr, arr)
         # print(res)
-        # # unsorted_rand = np.random.rand(n_vars, 4)
+        return res
