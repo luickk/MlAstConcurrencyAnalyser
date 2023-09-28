@@ -24,7 +24,7 @@ class ConcurrencyDetectorEnvironment:
 		self.reset_env = siccl_arr
 		self.siccl_arr = siccl_arr
 		self.n_action = 1
-		self.gen: SicclToCodeGenerator= SicclToCodeGenerator(siccl_config_test_time)
+		self.gen: SicclToCodeGenerator = SicclToCodeGenerator(siccl_config_test_time)
 		self.res_text: list[str] = []
 		self.input_shape = self.siccl_arr.shape
 		self.action_shape = (4,)
@@ -32,6 +32,7 @@ class ConcurrencyDetectorEnvironment:
 		self.step_count = 0
 		self.min_atomic_err = min_atomic_err
 		self.max_atomic_error_rate = 0
+		self.accum_atomic_err_rate = 0
 
 	# action tuple: index, mutex id
 	def step(self, action: (int, int)):
@@ -40,12 +41,8 @@ class ConcurrencyDetectorEnvironment:
 		var_name = self.siccl_arr[index][2]
 		parent_thread = self.siccl_arr[index][1]
 		thread_name = self.siccl_arr[index][0]
-		# add mutex
-		# if action[0] == 1:
+		# "action execution"
 		self.siccl_arr[index][3] = str(action[1])
-		# # remove mutex
-		# if action[0] == 0:
-		# 	self.siccl_arr[index][3] = 0
 
 		self.res_text = self.gen.generate(self.siccl_arr)
 		# print(self.res_text)
@@ -70,7 +67,9 @@ class ConcurrencyDetectorEnvironment:
 		print("----- step: " + str(self.step_count) +  " -------")
 		print("absoulte: " + str(reward))
 		absolute_atomic_err_rate = reward
-		if reward > self.max_atomic_error_rate: self.max_atomic_error_rate = reward
+		# if reward > self.max_atomic_error_rate: self.max_atomic_error_rate = reward
+		self.accum_atomic_err_rate += reward
+		if self.step_count > 0: self.max_atomic_error_rate = self.accum_atomic_err_rate / self.step_count
 		reward = 1 - utils.map_value(reward, self.min_atomic_err, self.max_atomic_error_rate, 0, 1)
 		print("(1)substraceted,mapped absoulte(mapping from " + str(self.min_atomic_err) + " to " + str(self.max_atomic_error_rate) + "): " + str(reward))
 		# classifier

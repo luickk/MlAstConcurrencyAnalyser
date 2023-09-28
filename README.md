@@ -22,6 +22,10 @@ That way of measuring works great and since the deviation isn't binary but very 
 
 ## Log Book
 
+### Disclaimer
+
+I'm starting by testing whether it can solve concurrency issues that require only a simple linear heuristic: Every variable id gets an exclusive mutex id.
+
 ### First working version ([commit](https://github.com/luickk/MlBasedConcurrencyAnalysis/commit/51d400eff8cbf0ef557caf6cc3c442c4b9b7f9e8))
 
 This commit contains the first working version of the project. The network manages to assign new variables the same mutexe over different threads. Although being a very(very) simple task to accomplish, the little time it took the network to get there makes me very optimistic that when scaling the complexity and context information, the network will be able to keep up.
@@ -75,6 +79,38 @@ Missing non atomic operations:
 - Reward: 0.9582021953186979
 - Loss: 1
 
+
+### New approach with DeepQ learning
+
+#### Comparison between old and new Model
+
+- DeepQ Model after 500 Model updates:
+
+    ```[[1 0 2 0]
+     [1 0 3 1]
+     [5 1 2 0]
+     [5 1 3 1]
+     [6 5 2 0]
+     [6 5 3 1]
+     [7 5 2 2]]
+     ```
+     Absoulte atomic error rate: 1.5
+
+ - Actor-Critic after 500 Model updates:
+    ```
+    [1 0 2 2
+     1 0 3 2 
+     5 1 2 2 
+     5 1 3 2 
+     6 5 2 1 
+     6 5 3 2 
+     7 5 2 1]
+     ```
+    Absoulte atomic error rate: 2.1666666665114462
+
+Interestingly enough, the networks managed to reach lower absolute atomic error rates (they reached lower probabilities of a concurrency issue occurring), but not through a linear heuristic such as: every variable gets an exclusive mutex, but through more abstract means of "guessing". 
+That's either, and actually very likely, induced through means of measurement (way of calculating the absolute atomic error rate) or actually a more safe configuration.
+
 # Approach
 
 ## ML model
@@ -88,6 +124,9 @@ The basic values the model will optimize for are, size (length of the SICCL scri
 ## Alternatives to Reinforcement learning
 
 [This](https://cs229.stanford.edu/proj2016/report/ChenYingLaird-DeepQLearningWithRecurrentNeuralNetwords-report.pdf) paper on patterns in long term data where the dependencies of the data nodes are far apart is really interesting. The problem with the reinforcement actor-critic model is that the data is really complex, with many data node dependencies/ patterns that may only reveal themselves after many iterations.
+
+My first model, which actually worked ok (see results above) was a simple Actor-Ciritic Reinforcement Model which is not optimal for long term behaving complex systems.
+That's why in the new iteration I'm trying the above mentioned DeepQ-Reinforced Model which is optimized for long term and more complex problems.
 
 ## Concurrency issue detection
 
